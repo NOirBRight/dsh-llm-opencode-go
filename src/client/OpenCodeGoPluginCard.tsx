@@ -554,9 +554,12 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
   useEffect(() => {
     if (!open || snapshot.status !== 'ready') return
-    setUsage({ status: 'loading' })
+    if (credential?.configured !== true && apiKey.trim().length === 0) {
+      setUsage({ status: 'idle' })
+      return
+    }
     void loadUsage()
-  }, [open, snapshot.status])
+  }, [open, snapshot.status, credential?.configured])
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return

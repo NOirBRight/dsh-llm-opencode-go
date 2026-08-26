@@ -14,7 +14,7 @@ Lab (linked checkout, port 3082):
 
 Production (tagged GitHub install, port 3080):
 
-    DSH_HOME=~/.dsh dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.0
+    DSH_HOME=~/.dsh dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.1
 
 ## Configuration
 

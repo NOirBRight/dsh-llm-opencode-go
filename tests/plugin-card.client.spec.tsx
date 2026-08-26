@@ -258,7 +258,10 @@ describe('OpenCodeGoPluginCard', () => {
         },
       },
     }))
-    render(<OpenCodeGoPluginCard {...props({ fetchUsage })} />)
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
@@ -280,7 +283,9 @@ describe('OpenCodeGoPluginCard', () => {
   })
 
   it('explains when the endpoint has no usage surface', async () => {
-    render(<OpenCodeGoPluginCard {...props()} />)
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+    })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
@@ -294,7 +299,10 @@ describe('OpenCodeGoPluginCard', () => {
         kind: 'ok' as const,
         usage: { fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.1, models: [] } },
       })
-    render(<OpenCodeGoPluginCard {...props({ fetchUsage })} />)
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
@@ -306,7 +314,10 @@ describe('OpenCodeGoPluginCard', () => {
 
   it('asks for a host restart when the running plugin predates usage reads', async () => {
     const fetchUsage = vi.fn(() => Promise.resolve({ kind: 'needs-restart' as const }))
-    render(<OpenCodeGoPluginCard {...props({ fetchUsage })} />)
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 

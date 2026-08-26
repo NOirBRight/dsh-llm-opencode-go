@@ -340,7 +340,7 @@ export function apply(ctx: Context, config: Config): void {
         }
         return settingsFailure('unknown OpenCode Go endpoint: ' + endpoint)
       },
-      { authority: 'loopback' },
+      { authority: 'trusted-host' },
     )
   })
 
