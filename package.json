@@ -1,7 +1,7 @@
 {
   "name": "dsh-llm-opencode-go",
   "description": "OpenCode Go models, mixed Completions/Responses/Messages chat, and subscription usage for DeepSeek Harness",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",

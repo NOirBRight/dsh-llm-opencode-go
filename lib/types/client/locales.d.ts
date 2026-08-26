@@ -18,6 +18,7 @@ export declare const en: {
     readonly connection: "Connection";
     readonly usage: "Subscription usage";
     readonly usageRefresh: "Refresh";
+    readonly usageIdle: "Click Refresh to load subscription usage. Saving does not fetch it.";
     readonly usageLoading: "Reading usage…";
     readonly usageSession: "5-hour usage";
     readonly usageWeekly: "Weekly usage";

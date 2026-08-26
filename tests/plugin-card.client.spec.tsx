@@ -264,6 +264,9 @@ describe('OpenCodeGoPluginCard', () => {
     })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    expect(screen.getByText(en.usageIdle)).toBeTruthy()
+    expect(fetchUsage).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
 
     await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 89.1%`)).toBeTruthy() })
     expect(screen.getByText(`${en.usageUsed} 18.8%`)).toBeTruthy()
@@ -288,6 +291,7 @@ describe('OpenCodeGoPluginCard', () => {
     })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
 
     await waitFor(() => { expect(screen.getByText(en.usageUnsupported)).toBeTruthy() })
   })
@@ -305,6 +309,7 @@ describe('OpenCodeGoPluginCard', () => {
     })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
 
     await waitFor(() => { expect(screen.getByText(en.usageUnreachable)).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
@@ -320,6 +325,7 @@ describe('OpenCodeGoPluginCard', () => {
     })} />)
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
 
     await waitFor(() => { expect(screen.getByText(en.usageNeedsRestart)).toBeTruthy() })
   })

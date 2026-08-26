@@ -552,14 +552,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setUsage({ status: 'error', message: usageErrorOf(error, t) })
     }
   }
-  useEffect(() => {
-    if (!open || snapshot.status !== 'ready') return
-    if (credential?.configured !== true && apiKey.trim().length === 0) {
-      setUsage({ status: 'idle' })
-      return
-    }
-    void loadUsage()
-  }, [open, snapshot.status, credential?.configured])
+  // Do not auto-read usage when the card opens. Idle used to look like a
+  // spinning refresh, and the Host GET /usage call could stall Save.
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return
@@ -719,7 +713,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                   <section style={sectionStyle} aria-label={t('usage')}>
                     <UsageHeader
                       title={t('usage')}
-                      spinning={usage.status === 'loading' || usage.status === 'idle'}
+                      spinning={usage.status === 'loading'}
                       disabled={usage.status === 'loading' || snapshot.status !== 'ready'}
                       refreshLabel={t('usageRefresh')}
                       busyLabel={t('usageLoading')}
@@ -727,7 +721,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                       onRefresh={() => { void loadUsage() }}
                     />
                     {(() => {
-                      if (usage.status === 'loading' || usage.status === 'idle') {
+                      if (usage.status === 'idle') {
+                        return <p style={hintStyle}>{t('usageIdle')}</p>
+                      }
+                      if (usage.status === 'loading') {
                         const known = lastUsage === undefined
                           ? 2
                           : Number(lastUsage.session !== undefined) + Number(lastUsage.weekly !== undefined) + Number(lastUsage.monthly !== undefined)

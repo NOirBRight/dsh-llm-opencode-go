@@ -67,18 +67,32 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
+  const withTimeout = async <T>(work: Promise<T>, ms: number): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      return await Promise.race([
+        work,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => { reject(new Error(t('requestFailed'))) }, ms)
+        }),
+      ])
+    } finally {
+      if (timer !== undefined) clearTimeout(timer)
+    }
+  }
+
   const storeApiKey: OpenCodeGoPluginCardFace['storeApiKey'] = async (value) => {
     const ref = scope.getSnapshot().value?.apiKeyEnv ?? DEFAULT_API_KEY_ENV
-    const response = await connectionApi.credentials.set({ ref, value })
+    const response = await withTimeout(
+      connectionApi.credentials.set({ ref, value }, AbortSignal.timeout(15_000)),
+      15_000,
+    )
     if (!response.result.ok) throw new Error(response.result.error.message)
   }
 
   const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
-    // Settings and credentials travel on core /api (trusted-host by default).
-    // A plugin channel such as /opencode-go is loopback-or-trusted-host only and
-    // is not how other users' reverse proxies expose the Host.
-    await scope.set('baseURL', settings.baseURL)
-    await scope.set('models', settings.models)
+    await withTimeout(scope.set('baseURL', settings.baseURL), 15_000)
+    await withTimeout(scope.set('models', settings.models), 15_000)
     if (apiKey !== undefined) await storeApiKey(apiKey)
     const accepted = scope.getSnapshot()
     if (accepted.value === undefined || accepted.revision === undefined) throw new Error(t('requestFailed'))
