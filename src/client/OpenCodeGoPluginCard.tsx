@@ -627,9 +627,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setSourceRevision(accepted.revision)
       setApiKey('')
       setNotice(t('saved'))
-      await refreshCredential()
-      // A replaced key can move the quota snapshot; re-read it.
       setUsage({ status: 'idle' })
+      void refreshCredential()
     } catch (error: unknown) {
       setFailure(messageOf(error, t('requestFailed')))
     } finally {

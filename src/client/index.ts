@@ -91,12 +91,31 @@ export function apply(ctx: ClientContext): void {
   }
 
   const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
-    await withTimeout(scope.set('baseURL', settings.baseURL), 15_000)
-    await withTimeout(scope.set('models', settings.models), 15_000)
+    // A typed key is the common Save from this card. Writing unchanged
+    // baseURL/models through settings.mutate can stall the whole Save.
     if (apiKey !== undefined) await storeApiKey(apiKey)
-    const accepted = scope.getSnapshot()
-    if (accepted.value === undefined || accepted.revision === undefined) throw new Error(t('requestFailed'))
-    return { settings: accepted.value, revision: accepted.revision }
+    const snapshot = scope.getSnapshot()
+    if (snapshot.value === undefined || snapshot.revision === undefined) throw new Error(t('requestFailed'))
+    const ops: { op: 'set', path: string[], value: unknown }[] = []
+    if (snapshot.value.baseURL !== settings.baseURL) {
+      ops.push({ op: 'set', path: ['baseURL'], value: settings.baseURL })
+    }
+    if (JSON.stringify(snapshot.value.models) !== JSON.stringify(settings.models)) {
+      ops.push({ op: 'set', path: ['models'], value: settings.models })
+    }
+    if (ops.length === 0) return { settings: snapshot.value, revision: snapshot.revision }
+    const response = await withTimeout(
+      connectionApi.settings.mutate({
+        ns: OPENCODE_GO_SETTINGS_NAMESPACE,
+        ops,
+        expectedRevision: snapshot.revision,
+      }, AbortSignal.timeout(15_000)),
+      15_000,
+    )
+    if (!response.result.ok) throw new Error(response.result.error.message)
+    const decoded = decodeOpenCodeGoSettings(response.result.value.value)
+    if (decoded === undefined) throw new Error(t('requestFailed'))
+    return { settings: decoded, revision: response.result.value.revision }
   }
 
   const callPlugin = async (endpoint: string, payload: unknown) => {
