@@ -1,0 +1,8 @@
+# OpenCode Go provider bundle layer.
+- insert:
+    - id: llm-opencode-go
+      name: 'dsh-llm-opencode-go'
+      config:
+        retryPolicy:
+          mode: normal
+          maxRetries: 3

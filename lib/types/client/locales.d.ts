@@ -1,0 +1,78 @@
+/** Localized copy for the OpenCode Go Plugin configuration card. */
+/** English OpenCode Go configuration copy. */
+export declare const en: {
+    readonly title: "OpenCode Go";
+    readonly description: "OpenCode Go API key, endpoint, and model catalog.";
+    readonly expand: "Expand settings";
+    readonly collapse: "Collapse settings";
+    readonly loading: "Loading plugin settings…";
+    readonly unavailable: "This profile does not expose OpenCode Go settings.";
+    readonly remoteAccess: "Remote browsers cannot edit plugin settings: the Harness configuration API is loopback-only. Browse the page on the host itself, or forward it first (ssh -L 3080:127.0.0.1:3080 user@host, then open http://127.0.0.1:3080). Settings saved there keep working for remote sessions.";
+    readonly readOnly: "This profile’s settings document is read-only.";
+    readonly apiKey: "API key";
+    readonly apiKeyPlaceholder: "Enter API key";
+    readonly apiKeyConfigured: "Configured — enter a new value to replace it";
+    readonly apiKeyPending: "New key entered — Fetch or Refresh stores it, then Host uses the stored credential";
+    readonly apiKeyUnset: "No API key configured";
+    readonly baseURL: "API URL";
+    readonly connection: "Connection";
+    readonly usage: "Subscription usage";
+    readonly usageRefresh: "Refresh";
+    readonly usageLoading: "Reading usage…";
+    readonly usageSession: "5-hour usage";
+    readonly usageWeekly: "Weekly usage";
+    readonly usageMonthly: "Monthly usage";
+    readonly usageUsed: "Used";
+    readonly usageModels: "Models used this week";
+    readonly usageRequests: "requests";
+    readonly usageUnsupported: "This endpoint does not report cloud usage.";
+    readonly usageNeedsRestart: "Usage appears after the running host reloads this plugin (restart dsh).";
+    readonly usageUnreachable: "Could not reach OpenCode Go usage. Check the network and API URL.";
+    readonly usageRefreshFailed: "Refresh failed";
+    readonly usageUpdatedAt: "Updated {time}";
+    readonly usageResetAt: "Resets {time}";
+    readonly usageResetAtDays: "Usage limits reset on {date} ({count} days left)";
+    readonly usageResetEveryHours: "Resets every {count} hours";
+    readonly usageResetEveryDays: "Resets every {count} days";
+    readonly models: "Model catalog";
+    readonly summaryModels: "{count} models";
+    readonly summaryOn: "Configured";
+    readonly summaryOff: "Not configured";
+    readonly modelDetails: "Details";
+    readonly dragModel: "Drag to reorder";
+    readonly fetchModels: "Fetch available models";
+    readonly fetchingModels: "Fetching models…";
+    readonly fetchEmpty: "The endpoint returned no models.";
+    readonly pickerTitle: "Select model catalog";
+    readonly pickerDescription: "Select the models to keep in this catalog.";
+    readonly pickerLoading: "Fetching model metadata…";
+    readonly applySelected: "Apply selected";
+    readonly cancel: "Cancel";
+    readonly close: "Close";
+    readonly addModel: "Add model manually";
+    readonly modelId: "Model ID";
+    readonly modelName: "Display name";
+    readonly modelContext: "Context window";
+    readonly modelOutput: "Maximum output";
+    readonly vision: "Vision";
+    readonly thinking: "Reasoning";
+    readonly tools: "Tools";
+    readonly defaultEffort: "Default thinking";
+    readonly remove: "Remove";
+    readonly inherited: "Using the composed catalog";
+    readonly customized: "Custom catalog";
+    readonly unsaved: "Unsaved changes";
+    readonly discard: "Discard";
+    readonly save: "Save";
+    readonly saving: "Saving…";
+    readonly saved: "Saved";
+    readonly invalidBaseURL: "Enter an HTTP or HTTPS API URL.";
+    readonly invalidModel: "Every model needs a unique ID and valid positive capacities.";
+    readonly invalidApiKey: "The API key cannot contain only whitespace.";
+    readonly requestFailed: "Request failed.";
+};
+/** Locale keys owned by the OpenCode Go configuration card. */
+export type OpenCodeGoSettingsKey = keyof typeof en;
+/** Chinese OpenCode Go configuration copy. */
+export declare const zh: Record<OpenCodeGoSettingsKey, string>;
+//# sourceMappingURL=locales.d.ts.map
