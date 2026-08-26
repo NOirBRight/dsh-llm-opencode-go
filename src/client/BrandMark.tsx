@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 export function BrandMark(): ReactNode {
   return (
-    <svg width={18} height={18} viewBox="0 0 512 512" aria-hidden="true" style={{ flex: 'none' }}>
+    <svg width={18} height={18} viewBox="128 96 256 320" aria-hidden="true" style={{ flex: 'none' }}>
       <path fill="currentColor" opacity={0.35} d="M320 224V352H192V224H320Z" />
       <path
         fill="currentColor"

@@ -10,13 +10,11 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import {
   decodeOpenCodeGoDiscoveryResult,
-  decodeOpenCodeGoSaveResult,
   decodeOpenCodeGoSettings,
   decodeOpenCodeGoUsageReply,
   DEFAULT_API_KEY_ENV,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_RPC_CHANNEL,
-  OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
@@ -76,30 +74,32 @@ export function apply(ctx: ClientContext): void {
   }
 
   const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
-    const snapshot = scope.getSnapshot()
-    if (snapshot.revision === undefined) throw new Error(t('requestFailed'))
-    const saved = await rpc.call(
-      OPENCODE_GO_RPC_CHANNEL,
-      OPENCODE_GO_SAVE_ENDPOINT,
-      {
-        baseURL: settings.baseURL,
-        models: settings.models,
-        expectedRevision: snapshot.revision,
-      },
-    )
-    if (!saved.ok) throw new Error(saved.error.message)
-    const accepted = decodeOpenCodeGoSaveResult(saved.value)
-    if (accepted === undefined) throw new Error(t('requestFailed'))
+    // Settings and credentials travel on core /api (trusted-host by default).
+    // A plugin channel such as /opencode-go is loopback-or-trusted-host only and
+    // is not how other users' reverse proxies expose the Host.
+    await scope.set('baseURL', settings.baseURL)
+    await scope.set('models', settings.models)
     if (apiKey !== undefined) await storeApiKey(apiKey)
-    return accepted
+    const accepted = scope.getSnapshot()
+    if (accepted.value === undefined || accepted.revision === undefined) throw new Error(t('requestFailed'))
+    return { settings: accepted.value, revision: accepted.revision }
+  }
+
+  const callPlugin = async (endpoint: string, payload: unknown) => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => { controller.abort() }, 20_000)
+    try {
+      return await rpc.call(OPENCODE_GO_RPC_CHANNEL, endpoint, payload, controller.signal)
+    } catch (error: unknown) {
+      if (controller.signal.aborted) throw new Error(t('requestFailed'))
+      throw error
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {
-    const result = await rpc.call(
-      OPENCODE_GO_RPC_CHANNEL,
-      OPENCODE_GO_USAGE_ENDPOINT,
-      request,
-    )
+    const result = await callPlugin(OPENCODE_GO_USAGE_ENDPOINT, request)
     if (!result.ok) {
       // A Host started before this package's usage endpoint exists answers
       // with its unknown-endpoint error; the card asks for a restart instead
@@ -117,11 +117,7 @@ export function apply(ctx: ClientContext): void {
   }
 
   const discoverModels: OpenCodeGoPluginCardFace['discoverModels'] = async (request: OpenCodeGoDiscoveryRequest) => {
-    const result = await rpc.call(
-      OPENCODE_GO_RPC_CHANNEL,
-      OPENCODE_GO_DISCOVER_ENDPOINT,
-      request,
-    )
+    const result = await callPlugin(OPENCODE_GO_DISCOVER_ENDPOINT, request)
     if (!result.ok) throw new Error(result.error.message)
     const decoded = decodeOpenCodeGoDiscoveryResult(result.value)
     if (decoded === undefined) throw new Error('OpenCode Go returned an invalid model catalog')
