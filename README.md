@@ -11,7 +11,7 @@ The package root exposes the Cordis plugin contract and OpenCodeGoAdapter. The s
 DeepSeek Harness 0.1.0-rc.6 or later is required. Install directly from GitHub:
 
 ~~~sh
-dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.7
+dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.8
 dsh web
 ~~~
 
@@ -21,19 +21,17 @@ Put this plugin **before** other LLM provider plugins in the profile bundle list
 
 ## Web configuration
 
-Open Settings → LLM Providers → OpenCode Go. Save the API key from **http://127.0.0.1:&lt;port&gt;** (the Harness save/discovery/usage RPC is loopback-only). The Host stores the key through the credentials API under `OPENCODE_API_KEY`; the browser never receives the stored literal.
+Open Settings → LLM Providers → OpenCode Go. The card stores the API key through the Harness credentials API under `OPENCODE_API_KEY`; the Host never returns the stored literal. Save, Fetch models, and usage RPC are loopback-only — write a new key from http://127.0.0.1:&lt;port&gt;. Chat with an already stored key works from a trusted-host URL.
 
-The card saves the public base URL and model catalog as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker and calls the package's loopback RPC. The Host reads `GET /zen/go/v1/models` and enriches ids with the documented catalog (context window, vision, thinking, and the chat protocol).
+The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` and enriches ids with the documented catalog (context window, vision, thinking, and Completions / Responses / Messages).
 
-Subscription usage mirrors the Go account windows: the Host reads `GET &lt;baseURL&gt;/usage` with the stored key and renders rolling, weekly, and monthly consumed-percentage meters. The credential never crosses to the browser. Click Refresh after Save; opening the card does not fetch usage.
+When a key is stored, expanding the card refreshes subscription usage. With no key, the usage section stays idle. The Host reads `GET &lt;baseURL&gt;/usage` and renders the 5-hour, weekly, and monthly windows as consumed-percentage meters. The credential never crosses to the browser.
 
-The model catalog starts collapsed. Each row has a drag handle (order persists), a chevron for context and capability flags, and a trash button.
+The model catalog starts collapsed and lists one row per model: a drag handle reorders rows (the order persists with the catalog), the chevron opens that row's context and capability flags, and the trash button removes it.
 
-### Plugin configuration screenshots
+### Plugin configuration
 
-Connection, subscription usage, and the sortable catalog:
-
-![OpenCode Go connection, usage, and catalog](docs/images/opencode-go-settings.png)
+![OpenCode Go Plugin card: API key, usage, and model catalog](docs/images/opencode-go-settings.png)
 
 The Models page lists saved `opencode-go` models and can select them. Current Harness releases do not expose a third-party editor slot inside that page, so this package owns its editor under LLM Providers.
 

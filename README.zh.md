@@ -11,7 +11,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 要求 DeepSeek Harness 0.1.0-rc.6 或更高版本。直接从 GitHub 安装：
 
 ~~~sh
-dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.7
+dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.8
 dsh web
 ~~~
 
@@ -21,19 +21,17 @@ dsh web
 
 ## Web 配置
 
-打开 Settings → LLM Providers → OpenCode Go。请在 **http://127.0.0.1:&lt;端口&gt;** 保存 API key（Harness 的保存/发现/用量 RPC 仅 loopback）。Host 通过 credentials API 把 key 存到 `OPENCODE_API_KEY`；浏览器拿不到已存明文。
+打开 Settings → LLM Providers → OpenCode Go。卡片通过 Harness credentials API 把 API key 存到 `OPENCODE_API_KEY`；Host 不会返回已保存的明文。Save / Fetch models / 用量 RPC 仅 loopback，写入新 key 请用 http://127.0.0.1:&lt;端口&gt;。已存 key 的聊天可以从 trusted-host 域名使用。
 
-卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会打开 picker 并走包的 loopback RPC。Host 读取 `GET /zen/go/v1/models`，再用文档目录补全 context window、vision、thinking 和聊天协议。
+卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用文档目录补全 context window、vision、thinking 以及 Completions / Responses / Messages。
 
-订阅用量与 Go 账号窗口一致：Host 用已存 key 读 `GET &lt;baseURL&gt;/usage`，渲染 rolling / weekly / monthly 已用百分比。凭据不会传到浏览器。先 Save 再点 Refresh；打开卡片不会自动拉用量。
+已配置 key 时，展开卡片会自动刷新订阅用量；没有 key 时用量区保持空闲。Host 读取 `GET &lt;baseURL&gt;/usage`，把 5 小时 / 每周 / 每月窗口渲染成已用百分比。凭据不会传到浏览器。
 
-模型目录默认折叠。每行有拖动手柄（顺序随目录保存）、展开能力开关的箭头，以及删除按钮。
+模型目录默认折叠，展开后一行一个模型：左侧把手可拖动排序（顺序随目录一起保存），右侧箭头展开该行的上下文和能力开关，垃圾桶按钮删除该行。
 
-### 插件配置截图
+### 插件配置
 
-连接、订阅用量与可排序目录：
-
-![OpenCode Go 连接、用量与目录](docs/images/opencode-go-settings.png)
+![OpenCode Go 插件卡片：API key、用量与模型目录](docs/images/opencode-go-settings.png)
 
 Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 Harness 版本没有 Models 页里的第三方编辑器 slot，因此本包在 LLM Providers 持有完整编辑器。
 

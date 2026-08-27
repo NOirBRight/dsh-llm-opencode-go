@@ -552,8 +552,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setUsage({ status: 'error', message: usageErrorOf(error, t) })
     }
   }
-  // Do not auto-read usage when the card opens. Idle used to look like a
-  // spinning refresh, and the Host GET /usage call could stall Save.
+  useEffect(() => {
+    if (!open || snapshot.status !== 'ready') return
+    if (credential?.configured !== true) return
+    void loadUsage()
+  }, [open, snapshot.status, credential?.configured])
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return
