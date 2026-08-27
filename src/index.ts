@@ -317,7 +317,17 @@ export function apply(ctx: Context, config: Config): void {
             if (request.apiKey !== undefined) {
               const credentials = ctx.get('credentials')
               if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
-              await credentials.set(options().apiKeyEnv, request.apiKey)
+              try {
+                await credentials.set(options().apiKeyEnv, request.apiKey)
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : 'credential write failed'
+                if (message.includes('writer lock')) {
+                  return settingsFailure(
+                    'Could not store the API key because ~/.dsh/.credentials.yaml.lock is held. Delete that stale lock file and retry.',
+                  )
+                }
+                return settingsFailure(message)
+              }
             }
             const accepted = settings.describe().find(descriptor => descriptor.ns === NS)
             const acceptedSettings = decodeOpenCodeGoSettings(accepted?.value)

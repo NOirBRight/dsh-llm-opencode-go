@@ -14,14 +14,14 @@ Lab (linked checkout, port 3082):
 
 Production (tagged GitHub install, port 3080):
 
-    DSH_HOME=~/.dsh dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.5
+    DSH_HOME=~/.dsh dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.6
 
 ## Configuration
 
     - id: llm-opencode-go
       name: dsh-llm-opencode-go
       config:
-        apiKeyEnv: OPENCODE_GO_API_KEY
+        apiKeyEnv: OPENCODE_API_KEY
         baseURL: https://opencode.ai/zen/go/v1
 
 ## Verification

@@ -64,7 +64,7 @@ async function loadComposition(baseURL: string): Promise<Context> {
 
 describe('llm-opencode-go real composition', () => {
   it('boots from cordis.yml and registers the opencode-go route', async () => {
-    vi.stubEnv('OPENCODE_GO_API_KEY', 'test-key')
+    vi.stubEnv('OPENCODE_API_KEY', 'test-key')
     const server = await mockServer([{ kind: 'sse', events: openAITextEvents }])
     const ctx = await loadComposition(server.url)
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['opencode-go'])
@@ -78,7 +78,7 @@ describe('llm-opencode-go real composition', () => {
   })
 
   it('fails with MISSING_CREDENTIAL when no key is available', async () => {
-    vi.stubEnv('OPENCODE_GO_API_KEY', '')
+    vi.stubEnv('OPENCODE_API_KEY', '')
     const server = await mockServer([{ kind: 'sse', events: openAITextEvents }])
     const ctx = await loadComposition(server.url)
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['opencode-go'])

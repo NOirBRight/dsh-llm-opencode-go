@@ -7,7 +7,7 @@ export const OPENCODE_GO_SETTINGS_NAMESPACE = 'llm-opencode-go'
 /** Provider route owned by the OpenCode Go plugin. */
 export const OPENCODE_GO_PROVIDER = 'opencode-go'
 /** Credential reference used when the settings section names none. */
-export const DEFAULT_API_KEY_ENV = 'OPENCODE_GO_API_KEY'
+export const DEFAULT_API_KEY_ENV = 'OPENCODE_API_KEY'
 /** Public OpenCode Go API base URL. */
 export const OPENCODE_GO_PUBLIC_BASE_URL = 'https://opencode.ai/zen/go/v1'
 /** Default context capacity for models without documented or discovered metadata. */
