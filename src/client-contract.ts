@@ -86,6 +86,8 @@ export interface OpenCodeGoSaveRequest {
   models: OpenCodeGoCatalogModelConfig[]
   /** Settings descriptor revision from which the editor began. */
   expectedRevision: number
+  /** Typed key stored by the Host credentials service; omitted when unchanged. */
+  apiKey?: string
 }
 
 /** Accepted settings snapshot returned after one atomic Host mutation. */
@@ -239,7 +241,13 @@ export function decodeOpenCodeGoSaveRequest(value: unknown): OpenCodeGoSaveReque
     if (model === undefined) return undefined
     models.push(model)
   }
-  return { baseURL: value.baseURL, models, expectedRevision: expectedRevision as number }
+  if (value.apiKey !== undefined && (typeof value.apiKey !== 'string' || value.apiKey.length === 0)) return undefined
+  return {
+    baseURL: value.baseURL,
+    models,
+    expectedRevision: expectedRevision as number,
+    ...(value.apiKey === undefined ? {} : { apiKey: value.apiKey }),
+  }
 }
 
 /** Narrow the Host save reply. */

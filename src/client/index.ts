@@ -10,11 +10,13 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import {
   decodeOpenCodeGoDiscoveryResult,
+  decodeOpenCodeGoSaveResult,
   decodeOpenCodeGoSettings,
   decodeOpenCodeGoUsageReply,
   DEFAULT_API_KEY_ENV,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_RPC_CHANNEL,
+  OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
@@ -67,57 +69,6 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
-  const withTimeout = async <T>(work: Promise<T>, ms: number): Promise<T> => {
-    let timer: ReturnType<typeof setTimeout> | undefined
-    try {
-      return await Promise.race([
-        work,
-        new Promise<T>((_, reject) => {
-          timer = setTimeout(() => { reject(new Error(t('requestFailed'))) }, ms)
-        }),
-      ])
-    } finally {
-      if (timer !== undefined) clearTimeout(timer)
-    }
-  }
-
-  const storeApiKey: OpenCodeGoPluginCardFace['storeApiKey'] = async (value) => {
-    const ref = scope.getSnapshot().value?.apiKeyEnv ?? DEFAULT_API_KEY_ENV
-    const response = await withTimeout(
-      connectionApi.credentials.set({ ref, value }, AbortSignal.timeout(15_000)),
-      15_000,
-    )
-    if (!response.result.ok) throw new Error(response.result.error.message)
-  }
-
-  const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
-    // A typed key is the common Save from this card. Writing unchanged
-    // baseURL/models through settings.mutate can stall the whole Save.
-    if (apiKey !== undefined) await storeApiKey(apiKey)
-    const snapshot = scope.getSnapshot()
-    if (snapshot.value === undefined || snapshot.revision === undefined) throw new Error(t('requestFailed'))
-    const ops: { op: 'set', path: string[], value: unknown }[] = []
-    if (snapshot.value.baseURL !== settings.baseURL) {
-      ops.push({ op: 'set', path: ['baseURL'], value: settings.baseURL })
-    }
-    if (JSON.stringify(snapshot.value.models) !== JSON.stringify(settings.models)) {
-      ops.push({ op: 'set', path: ['models'], value: settings.models })
-    }
-    if (ops.length === 0) return { settings: snapshot.value, revision: snapshot.revision }
-    const response = await withTimeout(
-      connectionApi.settings.mutate({
-        ns: OPENCODE_GO_SETTINGS_NAMESPACE,
-        ops,
-        expectedRevision: snapshot.revision,
-      }, AbortSignal.timeout(15_000)),
-      15_000,
-    )
-    if (!response.result.ok) throw new Error(response.result.error.message)
-    const decoded = decodeOpenCodeGoSettings(response.result.value.value)
-    if (decoded === undefined) throw new Error(t('requestFailed'))
-    return { settings: decoded, revision: response.result.value.revision }
-  }
-
   const callPlugin = async (endpoint: string, payload: unknown) => {
     const controller = new AbortController()
     const timer = setTimeout(() => { controller.abort() }, 20_000)
@@ -129,6 +80,27 @@ export function apply(ctx: ClientContext): void {
     } finally {
       clearTimeout(timer)
     }
+  }
+
+  const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
+    const snapshot = scope.getSnapshot()
+    if (snapshot.revision === undefined) throw new Error(t('requestFailed'))
+    const result = await callPlugin(OPENCODE_GO_SAVE_ENDPOINT, {
+      baseURL: settings.baseURL,
+      models: settings.models,
+      expectedRevision: snapshot.revision,
+      ...(apiKey === undefined ? {} : { apiKey }),
+    })
+    if (!result.ok) throw new Error(result.error.message)
+    const accepted = decodeOpenCodeGoSaveResult(result.value)
+    if (accepted === undefined) throw new Error(t('requestFailed'))
+    return accepted
+  }
+
+  const storeApiKey: OpenCodeGoPluginCardFace['storeApiKey'] = async (value) => {
+    const snapshot = scope.getSnapshot()
+    if (snapshot.value === undefined || snapshot.revision === undefined) throw new Error(t('requestFailed'))
+    await saveConfiguration(snapshot.value, value)
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {

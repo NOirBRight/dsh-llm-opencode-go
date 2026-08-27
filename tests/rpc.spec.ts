@@ -20,7 +20,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     ) => Promise<{ ok: boolean; value?: unknown; error?: unknown }>
     const ctx = new Context()
     await ctx.plugin(LlmRuntime).await()
-    const handle = vi.fn((_channel: string, _handler: Handler, _options: { authority: 'trusted-host' }) =>
+    const handle = vi.fn((_channel: string, _handler: Handler, _options: { authority: 'loopback' }) =>
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
     ctx.provide('credentials', {
@@ -32,7 +32,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     const registration = handle.mock.calls[0]
     if (registration === undefined) throw new Error('rich-discovery RPC was not registered')
     expect(registration[0]).toBe(OPENCODE_GO_RPC_CHANNEL)
-    expect(registration[2]).toEqual({ authority: 'trusted-host' })
+    expect(registration[2]).toEqual({ authority: 'loopback' })
     const handler = registration[1]
     const server = await mockServer([
       { kind: 'json', status: 200, body: JSON.stringify({ data: [{ id: 'grok-4.6' }, { id: 'minimax-m3' }] }) },
@@ -62,7 +62,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     ) => Promise<{ ok: boolean; value?: unknown }>
     const ctx = new Context()
     await ctx.plugin(LlmRuntime).await()
-    const handle = vi.fn((_channel: string, _handler: Handler, _options: { authority: 'trusted-host' }) =>
+    const handle = vi.fn((_channel: string, _handler: Handler, _options: { authority: 'loopback' }) =>
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
     ctx.provide('credentials', {

@@ -77,6 +77,8 @@ export interface OpenCodeGoSaveRequest {
     models: OpenCodeGoCatalogModelConfig[];
     /** Settings descriptor revision from which the editor began. */
     expectedRevision: number;
+    /** Typed key stored by the Host credentials service; omitted when unchanged. */
+    apiKey?: string;
 }
 /** Accepted settings snapshot returned after one atomic Host mutation. */
 export interface OpenCodeGoSaveResult {

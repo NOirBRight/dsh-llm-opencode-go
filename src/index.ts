@@ -314,6 +314,11 @@ export function apply(ctx: Context, config: Config): void {
               ops.push({ op: 'set', path: ['models'], value: request.models })
             }
             if (ops.length > 0) await settings.mutate(NS, ops, request.expectedRevision)
+            if (request.apiKey !== undefined) {
+              const credentials = ctx.get('credentials')
+              if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
+              await credentials.set(options().apiKeyEnv, request.apiKey)
+            }
             const accepted = settings.describe().find(descriptor => descriptor.ns === NS)
             const acceptedSettings = decodeOpenCodeGoSettings(accepted?.value)
             if (accepted === undefined || acceptedSettings === undefined) {
@@ -340,7 +345,7 @@ export function apply(ctx: Context, config: Config): void {
         }
         return settingsFailure('unknown OpenCode Go endpoint: ' + endpoint)
       },
-      { authority: 'trusted-host' },
+      { authority: 'loopback' },
     )
   })
 
