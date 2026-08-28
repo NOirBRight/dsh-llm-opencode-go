@@ -17,6 +17,27 @@ dsh web
 
 The repository tracks release-ready lib artifacts, so GitHub installation needs no build-script allowlist. A source checkout can use a link installation after running `pnpm run build`.
 
+## Remote management
+
+By default the plugin's settings RPC is loopback-only. When you open DSH from a non-loopback host (e.g. https://dsh.noirbright.top or http://192.168.50.75:3080), the card shows “A remote browser cannot edit plugin settings”.
+
+To allow editing from a trusted host:
+
+1. Add to your profile patch (`~/.dsh/profiles/web/cordis.patch.yml` for production, `~/.dsh-lab/profiles/web/cordis.patch.yml` for lab):
+   ```yaml
+   - id: llm-opencode-go
+     config:
+       remoteManagement: true
+   ```
+2. Restart DSH with the host allowlisted:
+   ```sh
+   dsh web --trusted-host 192.168.50.75 --trusted-host dsh.noirbright.top
+   ```
+   The current production launch already uses `--trusted-host 192.168.50.75 --trusted-host dsh.noirbright.top`; add any additional host you use.
+3. Refresh the browser. Settings saved on the host keep working for remote sessions.
+
+Without `remoteManagement: true`, use `ssh -L 3080:127.0.0.1:3080 user@host` and open `http://127.0.0.1:3080`.
+
 Put this plugin **before** other LLM provider plugins in the profile bundle list so its LLM Providers section enumerates every installed card.
 
 ## Web configuration
