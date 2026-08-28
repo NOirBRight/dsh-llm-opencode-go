@@ -16,6 +16,7 @@ import type {
 
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
+import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
 import type {} from './provider-section.ts'
@@ -127,33 +128,7 @@ const sectionTitleStyle: CSSProperties = {
 const fieldStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
 const labelStyle: CSSProperties = { fontSize: 13, color: 'var(--dsw-alias-label-secondary)' }
 const hintStyle: CSSProperties = { margin: 0, fontSize: 12, color: 'var(--dsw-alias-label-tertiary)' }
-const inputStyle: CSSProperties = {
-  boxSizing: 'border-box',
-  width: '100%',
-  minHeight: 36,
-  border: '1px solid var(--dsw-alias-border-l2)',
-  borderRadius: 8,
-  padding: '7px 10px',
-  background: 'var(--dsw-alias-bg-layer-1)',
-  color: 'var(--dsw-alias-label-primary)',
-  font: 'inherit',
-}
-const selectStyle: CSSProperties = {
-  boxSizing: 'border-box',
-  minHeight: 32,
-  border: '1px solid var(--dsw-alias-border-l2)',
-  borderRadius: 8,
-  padding: '4px 28px 4px 10px',
-  backgroundColor: 'var(--dsw-alias-bg-layer-1)',
-  color: 'var(--dsw-alias-label-primary)',
-  font: 'inherit',
-  appearance: 'none',
-  backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
-  backgroundRepeat: 'no-repeat',
-  backgroundPosition: 'right 8px center',
-}
-const rowInputStyle: CSSProperties = { ...inputStyle, minHeight: 32, padding: '4px 10px' }
-const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }
+// catalog visuals are imported from ./model-catalog-ui.tsx
 const actionsStyle: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }
 const buttonStyle: CSSProperties = {
   minHeight: 34,
@@ -200,21 +175,7 @@ const disclosureStyle: CSSProperties = {
   textAlign: 'left',
   cursor: 'pointer',
 }
-const modelContentStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) auto auto',
-  alignItems: 'center',
-  gap: 6,
-  padding: '6px 8px',
-}
-const modelDetailStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 10,
-  borderTop: '1px solid var(--dsw-alias-border-l2)',
-  padding: '10px 4px 4px',
-}
-const capabilitiesStyle: CSSProperties = { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 14 }
+// modelDetailStyle / capabilitiesStyle imported
 const statusStyle: CSSProperties = { margin: 0, fontSize: 13, color: 'var(--dsw-alias-label-secondary)' }
 const errorStyle: CSSProperties = { ...statusStyle, color: 'var(--dsw-alias-state-error-primary)' }
 const barTrackStyle: CSSProperties = {
@@ -909,8 +870,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                   </button>
                                   {expanded
                                     ? (
-                                      <div style={{ ...modelDetailStyle, gridColumn: '1 / -1' }}>
-                                        <div style={rowStyle}>
+                                      <ModelDetail>
+                                        <ModelDetailRow>
                                           <label style={fieldStyle}>
                                             <span style={labelStyle}>{t('modelContext')}</span>
                                             <input
@@ -922,8 +883,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                               onChange={(event) => { patchModel(index, { contextWindow: event.target.value }) }}
                                             />
                                           </label>
-                                        </div>
-                                        <div style={capabilitiesStyle}>
+                                        </ModelDetailRow>
+                                        <Capabilities>
                                           <Capability label={t('vision')} checked={model.vision === true} disabled={disabled} onChange={(vision) => { patchModel(index, { vision }) }} />
                                           <Capability label={t('thinking')} checked={model.thinking === true} disabled={disabled} onChange={(thinking) => { patchModel(index, { thinking }) }} />
                                           {model.thinking === true
@@ -944,8 +905,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                               </label>
                                             )
                                             : null}
-                                        </div>
-                                      </div>
+                                        </Capabilities>
+                                      </ModelDetail>
                                     )
                                     : null}
                                 </div>
