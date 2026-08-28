@@ -7,7 +7,6 @@ import type { OpenCodeGoSettingsView } from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
 
 const value: OpenCodeGoSettingsView = {
-  apiKeyEnv: 'OPENCODE_GO_API_KEY',
   baseURL: 'https://opencode.ai/zen/go/v1',
   models: [],
   defaultContextWindow: 262_144,

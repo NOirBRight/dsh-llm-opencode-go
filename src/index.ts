@@ -9,8 +9,8 @@ import z from '@deepseek-ai/schemastery'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import { assertUsableApiKey, LlmError, resolveRetryPolicy, RetryPolicySchema } from '@deepseek-ai/dsh-llm'
 import type { RetryPolicyConfig } from '@deepseek-ai/dsh-llm'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
+import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { CredentialRecord } from '@deepseek-ai/dsh-credentials'
 import { deepEqualJson, installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import type { SettingsPathOp } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
@@ -27,8 +27,6 @@ import {
   decodeOpenCodeGoDiscoveryRequest,
   decodeOpenCodeGoSaveRequest,
   decodeOpenCodeGoSettings,
-  DEFAULT_API_KEY_ENV,
-  LEGACY_API_KEY_ENV,
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
@@ -57,8 +55,6 @@ export {
 } from './usage.ts'
 export type { OpenCodeGoUsageRequest } from './usage.ts'
 export {
-  DEFAULT_API_KEY_ENV,
-  LEGACY_API_KEY_ENV,
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
@@ -100,11 +96,9 @@ export const inject = ['llm']
 
 const DEFAULT_MAX_RETRIES = 3
 const NS = settingsNamespace(OPENCODE_GO_SETTINGS_NAMESPACE)
-const DEFAULT_API_KEY_REF = credentialRef(DEFAULT_API_KEY_ENV)
-const LEGACY_API_KEY_REF = credentialRef(LEGACY_API_KEY_ENV)
+const OPENCODE_GO_CREDENTIAL_KEY = credentialKey(OPENCODE_GO_SETTINGS_NAMESPACE, OPENCODE_GO_PROVIDER)
 
 export interface Config {
-  apiKeyEnv?: string
   baseURL?: string
   models?: OpenCodeGoCatalogModel[]
   maxTokens?: number
@@ -128,7 +122,6 @@ const catalogModel: z<OpenCodeGoCatalogModel> = z.object({
 })
 
 export const Config: z<Config> = z.object({
-  apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
   baseURL: z.string().default(PUBLIC_BASE_URL),
   models: z.array(catalogModel).default([]),
   maxTokens: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER),
@@ -192,7 +185,6 @@ export function resolveAdapterOptions(config: Config): OpenCodeGoConnectionOptio
     throw new Error('llm-opencode-go: maxTokens must be a positive integer')
   }
   return {
-    apiKeyEnv: credentialRef(config.apiKeyEnv ?? DEFAULT_API_KEY_ENV),
     baseURL: validHTTPURL(config.baseURL ?? PUBLIC_BASE_URL, 'baseURL'),
     models: resolveModels(config.models),
     defaultContextWindow,
@@ -247,28 +239,29 @@ export function apply(ctx: Context, config: Config): void {
   }
   options()
 
-  const compatibleCredentialRefs = (ref: typeof DEFAULT_API_KEY_REF): readonly typeof DEFAULT_API_KEY_REF[] =>
-    ref === DEFAULT_API_KEY_REF ? [ref, LEGACY_API_KEY_REF] : [ref]
-
-  const resolveApiKey = async (connection: OpenCodeGoConnectionOptions): Promise<string> => {
-    const ref = connection.apiKeyEnv
-    const credentials = ctx.get('credentials')
-    if (credentials !== undefined) {
-      for (const candidate of compatibleCredentialRefs(ref)) {
-        const hit = await credentials.resolve(candidate)
-        if (hit !== undefined) return assertUsableApiKey(hit.value, 'llm-opencode-go', candidate)
-      }
-    } else {
-      for (const candidate of compatibleCredentialRefs(ref)) {
-        const ambient = launchEnvironmentOf(ctx).get(candidate)
-        if (ambient !== undefined && ambient.value.length > 0) {
-          return assertUsableApiKey(ambient.value, 'llm-opencode-go', candidate)
-        }
-      }
+  const apiKeyFromRecord = (record: CredentialRecord | undefined): string | undefined => {
+    if (record === undefined) return undefined
+    if (record.kind !== 'api-key') {
+      throw new LlmError(
+        `llm-opencode-go: credential record "${OPENCODE_GO_CREDENTIAL_KEY}" is not an API-key record`,
+        'INVALID_CREDENTIAL',
+      )
     }
+    if (record.key === undefined) return undefined
+    return assertUsableApiKey(record.key, 'llm-opencode-go', OPENCODE_GO_CREDENTIAL_KEY)
+  }
+
+  const storedApiKey = async (): Promise<string | undefined> => {
+    const credentials = ctx.get('credentials')
+    if (credentials === undefined) return undefined
+    return apiKeyFromRecord(await credentials.readRecord(OPENCODE_GO_CREDENTIAL_KEY))
+  }
+
+  const resolveApiKey = async (): Promise<string> => {
+    const apiKey = await storedApiKey()
+    if (apiKey !== undefined) return apiKey
     throw new LlmError(
-      'llm-opencode-go: no API key for provider route "' + OPENCODE_GO_PROVIDER + '"; store ' + ref
-      + ' through the credentials service, or export ' + ref + ' in the launching environment',
+      `llm-opencode-go: no API key stored in credential record "${OPENCODE_GO_CREDENTIAL_KEY}"; use the OpenCode Go settings card to store it`,
       'MISSING_CREDENTIAL',
     )
   }
@@ -290,30 +283,11 @@ export function apply(ctx: Context, config: Config): void {
     registeredPolicy = policy
   }
 
-  const storedApiKey = async (): Promise<string | undefined> => {
-    const ref = options().apiKeyEnv
-    const credentials = ctx.get('credentials')
-    if (credentials !== undefined) {
-      for (const candidate of compatibleCredentialRefs(ref)) {
-        const hit = await credentials.resolve(candidate)
-        if (hit !== undefined) return hit.value
-      }
-      return undefined
-    }
-    for (const candidate of compatibleCredentialRefs(ref)) {
-      const value = launchEnvironmentOf(ctx).get(candidate)?.value
-      if (value !== undefined && value.length > 0) return value
-    }
-    return undefined
-  }
   const credentialStatus = async (): Promise<{ configured: boolean, writable: boolean }> => {
     const credentials = ctx.get('credentials')
     if (credentials === undefined) return { configured: false, writable: false }
-    const ref = options().apiKeyEnv
-    const info = await credentials.describe(ref)
-    if (info.configured || ref !== DEFAULT_API_KEY_REF) return { configured: info.configured, writable: info.writable }
-    const legacy = await credentials.describe(LEGACY_API_KEY_REF)
-    return { configured: legacy.configured, writable: info.writable }
+    const info = await credentials.describeRecord(OPENCODE_GO_CREDENTIAL_KEY)
+    return { configured: (await storedApiKey()) !== undefined, writable: info.writable }
   }
 
   // Host Models-page discovery may include a draft apiKey on LlmModelDiscoveryRequest.
@@ -338,7 +312,15 @@ export function apply(ctx: Context, config: Config): void {
           if (request === undefined) return settingsFailure('invalid OpenCode Go credential request')
           const credentials = ctx.get('credentials')
           if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
-          await credentials.set(options().apiKeyEnv, request.apiKey)
+          await credentials.modifyRecord(OPENCODE_GO_CREDENTIAL_KEY, async (current) => {
+            if (current !== undefined && current.kind !== 'api-key') {
+              throw new LlmError(
+                `llm-opencode-go: credential record "${OPENCODE_GO_CREDENTIAL_KEY}" is not an API-key record`,
+                'INVALID_CREDENTIAL',
+              )
+            }
+            return { kind: 'api-key', key: request.apiKey }
+          })
           return { ok: true as const, value: await credentialStatus() }
         }
         if (endpoint === OPENCODE_GO_DISCOVER_ENDPOINT) {

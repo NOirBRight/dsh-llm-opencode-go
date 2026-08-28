@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { createOpenCodeGoPiAiProfile } from '../src/pi-ai-profile.ts'
 import type { OpenCodeGoConnectionOptions } from '../src/adapter.ts'
 
 function connection(models: OpenCodeGoConnectionOptions['models']): OpenCodeGoConnectionOptions {
   return {
     baseURL: 'https://opencode.ai/zen/go/v1',
-    apiKeyEnv: credentialRef('OPENCODE_GO_API_KEY'),
     models,
     defaultContextWindow: 262_144,
     maxTokens: undefined,

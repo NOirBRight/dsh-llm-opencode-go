@@ -13,14 +13,13 @@ export { PUBLIC_BASE_URL, discoverModels, parseOpenCodeGoModels } from './discov
 export { protocolForModel, enrichModel, familyForModel, knownModel } from './catalog.ts';
 export { DEFAULT_USAGE_REQUEST_TIMEOUT_MS, OPENCODE_GO_USAGE_FAILED, OPENCODE_GO_USAGE_UNSUPPORTED, parseOpenCodeGoUsage, readOpenCodeGoUsage, } from './usage.ts';
 export type { OpenCodeGoUsageRequest } from './usage.ts';
-export { DEFAULT_API_KEY_ENV, LEGACY_API_KEY_ENV, OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT, OPENCODE_GO_DISCOVER_ENDPOINT, OPENCODE_GO_PROVIDER, OPENCODE_GO_PUBLIC_BASE_URL, OPENCODE_GO_RPC_CHANNEL, OPENCODE_GO_SAVE_ENDPOINT, OPENCODE_GO_SETTINGS_READ_ENDPOINT, OPENCODE_GO_SETTINGS_NAMESPACE, OPENCODE_GO_USAGE_ENDPOINT, decodeOpenCodeGoCatalogModel, decodeOpenCodeGoCredentialSetRequest, decodeOpenCodeGoDiscoveryRequest, decodeOpenCodeGoDiscoveryResult, decodeOpenCodeGoSettingsReadResult, decodeOpenCodeGoSaveRequest, decodeOpenCodeGoSaveResult, decodeOpenCodeGoSettings, decodeOpenCodeGoUsageReply, } from './client-contract.ts';
+export { OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT, OPENCODE_GO_DISCOVER_ENDPOINT, OPENCODE_GO_PROVIDER, OPENCODE_GO_PUBLIC_BASE_URL, OPENCODE_GO_RPC_CHANNEL, OPENCODE_GO_SAVE_ENDPOINT, OPENCODE_GO_SETTINGS_READ_ENDPOINT, OPENCODE_GO_SETTINGS_NAMESPACE, OPENCODE_GO_USAGE_ENDPOINT, decodeOpenCodeGoCatalogModel, decodeOpenCodeGoCredentialSetRequest, decodeOpenCodeGoDiscoveryRequest, decodeOpenCodeGoDiscoveryResult, decodeOpenCodeGoSettingsReadResult, decodeOpenCodeGoSaveRequest, decodeOpenCodeGoSaveResult, decodeOpenCodeGoSettings, decodeOpenCodeGoUsageReply, } from './client-contract.ts';
 export type { OpenCodeGoApi, OpenCodeGoCatalogModelConfig, OpenCodeGoDiscoveryRequest, OpenCodeGoDiscoveryResult, OpenCodeGoSaveRequest, OpenCodeGoSaveResult, OpenCodeGoSettingsView, OpenCodeGoUsageModelCount, OpenCodeGoUsageReply, OpenCodeGoUsageView, OpenCodeGoUsageWindow, } from './client-contract.ts';
 export { createOpenCodeGoPiAiProfile } from './pi-ai-profile.ts';
 export type * from './types.ts';
 export declare const name = "llm-opencode-go";
 export declare const inject: string[];
 export interface Config {
-    apiKeyEnv?: string;
     baseURL?: string;
     models?: OpenCodeGoCatalogModel[];
     maxTokens?: number;

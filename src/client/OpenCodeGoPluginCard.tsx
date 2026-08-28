@@ -24,9 +24,9 @@ import { SortableList } from './SortableList.tsx'
 
 /** Credential state exposed without returning the credential value. */
 export interface OpenCodeGoCredentialState {
-  /** Whether any Host credential layer supplies the reference. */
+  /** Whether the plugin-owned credential record contains a usable key. */
   configured: boolean
-  /** Whether the writable credentials provider can replace it. */
+  /** Whether the writable credentials provider can replace the record. */
   writable: boolean
 }
 
@@ -48,7 +48,7 @@ export interface OpenCodeGoPluginCardFace {
     /** Reactive Host-owned settings section. */
     openCodeGoSettings: SettingsScope<OpenCodeGoSettingsView>
   }
-  /** Read value-free credential status for the section's reference. */
+  /** Read value-free status for the plugin-owned credential record. */
   describeCredential: () => Promise<OpenCodeGoCredentialState>
   /** Persist a typed key through the credentials API before Host reads. */
   storeApiKey: (apiKey: string) => Promise<void>
@@ -414,7 +414,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   useEffect(() => {
     if (snapshot.status !== 'ready') return
     void refreshCredential()
-  }, [snapshot.status, snapshot.value?.apiKeyEnv])
+  }, [snapshot.status])
   useEffect(() => () => { props.closeModelPicker() }, [props.closeModelPicker])
 
   if (snapshot.status === 'unavailable') {

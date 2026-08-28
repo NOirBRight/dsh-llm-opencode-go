@@ -110,7 +110,6 @@ export function createOpenCodeGoPiAiProfile(
   return {
     provider: OPENCODE_GO_PROVIDER,
     displayName: 'OpenCode Go',
-    apiKeyEnv: connection.apiKeyEnv,
     baseURL,
     defaultContextWindow: connection.defaultContextWindow,
     defaultMaxTokens: OPENCODE_GO_DEFAULT_MODEL_MAX_TOKENS,

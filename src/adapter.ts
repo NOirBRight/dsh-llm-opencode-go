@@ -13,7 +13,6 @@ import type {
   ResolvedRetryPolicy,
   StreamChunk,
 } from '@deepseek-ai/dsh-llm'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import { PiAiAdapter } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -35,8 +34,6 @@ export type OpenCodeGoCatalogModel = OpenCodeGoCatalogModelConfig
 export interface OpenCodeGoConnectionOptions {
   /** Go API base, including /zen/go/v1. */
   baseURL: string
-  /** Credential reference of this same resolution, resolved per request. */
-  apiKeyEnv: CredentialRef
   /** Models exposed to discovery consumers and accepted for chat requests. */
   models: readonly OpenCodeGoCatalogModel[]
   /** Positive context capacity used when the selected model has no exact value. */
@@ -52,7 +49,7 @@ export interface OpenCodeGoConnectionOptions {
 /** Constructor options for OpenCodeGoAdapter. */
 export interface OpenCodeGoAdapterOptions {
   options: () => OpenCodeGoConnectionOptions
-  resolveApiKey: (connection: OpenCodeGoConnectionOptions) => Promise<string>
+  resolveApiKey: () => Promise<string>
   resolveAttachments?: () => AttachmentStore | undefined
 }
 
@@ -105,7 +102,7 @@ export class OpenCodeGoAdapter extends LlmAdapter {
     const profiles = new Map<string, ResolvedPiAiProviderProfile>([[OPENCODE_GO_PROVIDER, profile]])
     const adapter = new PiAiAdapter({
       profiles: () => profiles,
-      resolveApiKey: () => this.config.resolveApiKey(options),
+      resolveApiKey: () => this.config.resolveApiKey(),
       auth: this.auth,
       ...(this.config.resolveAttachments === undefined ? {} : { resolveAttachments: this.config.resolveAttachments }),
     })
