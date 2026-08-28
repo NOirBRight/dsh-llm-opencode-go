@@ -23,7 +23,7 @@ afterEach(async () => {
   vi.unstubAllEnvs()
 })
 
-async function loadComposition(baseURL: string): Promise<Context> {
+async function loadComposition(baseURL: string, storedCredentials?: Readonly<Record<string, string>>): Promise<Context> {
   root = await mkdtemp(join(tmpdir(), 'dsh-llm-opencode-go-comp-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
@@ -42,6 +42,18 @@ async function loadComposition(baseURL: string): Promise<Context> {
   ].join('\n'))
   const ctx = new Context()
   context = ctx
+  if (storedCredentials !== undefined) {
+    const values = new Map(Object.entries(storedCredentials))
+    ctx.provide('credentials', {
+      resolve: async (ref: string) => {
+        const value = values.get(ref)
+        return value === undefined ? undefined : { value, source: 'test' }
+      },
+      describe: async (ref: string) => ({ configured: values.has(ref), writable: true }),
+      set: async (ref: string, value: string) => { values.set(ref, value) },
+      unset: async (ref: string) => { values.delete(ref) },
+    } as never)
+  }
   ctx.baseUrl = pathToFileURL(root).href + '/'
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
@@ -75,6 +87,24 @@ describe('llm-opencode-go real composition', () => {
     const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
     expect(result.finish).toEqual({ kind: 'stop' })
     expect(server.headers[0]?.authorization).toBe('Bearer test-key')
+  })
+
+  it('uses the legacy ambient key when the official reference is empty', async () => {
+    vi.stubEnv('OPENCODE_API_KEY', '')
+    vi.stubEnv('OPENCODE_GO_API_KEY', 'legacy-test-key')
+    const server = await mockServer([{ kind: 'sse', events: openAITextEvents }])
+    const ctx = await loadComposition(server.url)
+    const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
+    expect(result.finish).toEqual({ kind: 'stop' })
+    expect(server.headers[0]?.authorization).toBe('Bearer legacy-test-key')
+  })
+
+  it('uses the legacy stored key when the official reference is empty', async () => {
+    const server = await mockServer([{ kind: 'sse', events: openAITextEvents }])
+    const ctx = await loadComposition(server.url, { OPENCODE_GO_API_KEY: 'legacy-test-key' })
+    const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
+    expect(result.finish).toEqual({ kind: 'stop' })
+    expect(server.headers[0]?.authorization).toBe('Bearer legacy-test-key')
   })
 
   it('fails with MISSING_CREDENTIAL when no key is available', async () => {

@@ -48,6 +48,8 @@ The card saves the public base URL and model catalog together as one revision-fe
 
 When a key is stored, expanding the card refreshes subscription usage. With no key, the usage section stays idle. The Host reads `GET &lt;baseURL&gt;/usage` and renders the 5-hour, weekly, and monthly windows as consumed-percentage meters. The credential never crosses to the browser.
 
+Releases through v0.1.5 used `OPENCODE_GO_API_KEY`. When `apiKeyEnv` still uses the default `OPENCODE_API_KEY`, the plugin reads that legacy reference only when the official reference is unconfigured. New values are always written to `OPENCODE_API_KEY`; an explicitly configured `apiKeyEnv` is read and written exactly as named.
+
 The model catalog starts collapsed and lists one row per model: a drag handle reorders rows (the order persists with the catalog), the chevron opens that row's context and capability flags, and the trash button removes it.
 
 ### Plugin configuration

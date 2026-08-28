@@ -28,6 +28,7 @@ import {
   decodeOpenCodeGoSaveRequest,
   decodeOpenCodeGoSettings,
   DEFAULT_API_KEY_ENV,
+  LEGACY_API_KEY_ENV,
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
@@ -57,6 +58,7 @@ export {
 export type { OpenCodeGoUsageRequest } from './usage.ts'
 export {
   DEFAULT_API_KEY_ENV,
+  LEGACY_API_KEY_ENV,
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
@@ -98,6 +100,8 @@ export const inject = ['llm']
 
 const DEFAULT_MAX_RETRIES = 3
 const NS = settingsNamespace(OPENCODE_GO_SETTINGS_NAMESPACE)
+const DEFAULT_API_KEY_REF = credentialRef(DEFAULT_API_KEY_ENV)
+const LEGACY_API_KEY_REF = credentialRef(LEGACY_API_KEY_ENV)
 
 export interface Config {
   apiKeyEnv?: string
@@ -243,16 +247,23 @@ export function apply(ctx: Context, config: Config): void {
   }
   options()
 
+  const compatibleCredentialRefs = (ref: typeof DEFAULT_API_KEY_REF): readonly typeof DEFAULT_API_KEY_REF[] =>
+    ref === DEFAULT_API_KEY_REF ? [ref, LEGACY_API_KEY_REF] : [ref]
+
   const resolveApiKey = async (connection: OpenCodeGoConnectionOptions): Promise<string> => {
     const ref = connection.apiKeyEnv
     const credentials = ctx.get('credentials')
     if (credentials !== undefined) {
-      const hit = await credentials.resolve(ref)
-      if (hit !== undefined) return assertUsableApiKey(hit.value, 'llm-opencode-go', ref)
+      for (const candidate of compatibleCredentialRefs(ref)) {
+        const hit = await credentials.resolve(candidate)
+        if (hit !== undefined) return assertUsableApiKey(hit.value, 'llm-opencode-go', candidate)
+      }
     } else {
-      const ambient = launchEnvironmentOf(ctx).get(ref)
-      if (ambient !== undefined && ambient.value.length > 0) {
-        return assertUsableApiKey(ambient.value, 'llm-opencode-go', ref)
+      for (const candidate of compatibleCredentialRefs(ref)) {
+        const ambient = launchEnvironmentOf(ctx).get(candidate)
+        if (ambient !== undefined && ambient.value.length > 0) {
+          return assertUsableApiKey(ambient.value, 'llm-opencode-go', candidate)
+        }
       }
     }
     throw new LlmError(
@@ -282,14 +293,27 @@ export function apply(ctx: Context, config: Config): void {
   const storedApiKey = async (): Promise<string | undefined> => {
     const ref = options().apiKeyEnv
     const credentials = ctx.get('credentials')
-    if (credentials !== undefined) return (await credentials.resolve(ref))?.value
-    return launchEnvironmentOf(ctx).get(ref)?.value
+    if (credentials !== undefined) {
+      for (const candidate of compatibleCredentialRefs(ref)) {
+        const hit = await credentials.resolve(candidate)
+        if (hit !== undefined) return hit.value
+      }
+      return undefined
+    }
+    for (const candidate of compatibleCredentialRefs(ref)) {
+      const value = launchEnvironmentOf(ctx).get(candidate)?.value
+      if (value !== undefined && value.length > 0) return value
+    }
+    return undefined
   }
   const credentialStatus = async (): Promise<{ configured: boolean, writable: boolean }> => {
     const credentials = ctx.get('credentials')
     if (credentials === undefined) return { configured: false, writable: false }
-    const info = await credentials.describe(options().apiKeyEnv)
-    return { configured: info.configured, writable: info.writable }
+    const ref = options().apiKeyEnv
+    const info = await credentials.describe(ref)
+    if (info.configured || ref !== DEFAULT_API_KEY_REF) return { configured: info.configured, writable: info.writable }
+    const legacy = await credentials.describe(LEGACY_API_KEY_REF)
+    return { configured: legacy.configured, writable: info.writable }
   }
 
   // Host Models-page discovery may include a draft apiKey on LlmModelDiscoveryRequest.
