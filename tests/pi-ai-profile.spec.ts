@@ -19,11 +19,13 @@ describe('OpenCode Go pi-ai profile', () => {
     const profile = createOpenCodeGoPiAiProfile(connection([
       { id: 'glm-5.3', contextWindow: 1_000_000 },
       { id: 'grok-4.6', contextWindow: 500_000, thinking: true, vision: true },
+      { id: 'muse-spark-1.2-contributor', contextWindow: 1_048_576, thinking: true, vision: true },
       { id: 'minimax-m3', contextWindow: 1_000_000, api: 'anthropic-messages' },
     ]))
     const models = profile.piProvider.getModels()
     expect(models.find(model => model.id === 'glm-5.3')?.api).toBe('openai-completions')
     expect(models.find(model => model.id === 'grok-4.6')?.api).toBe('openai-responses')
+    expect(models.find(model => model.id === 'muse-spark-1.2-contributor')?.api).toBe('openai-completions')
     expect(models.find(model => model.id === 'minimax-m3')?.api).toBe('anthropic-messages')
     expect(profile.provider).toBe('opencode-go')
     expect(profile.baseURL).toBe('https://opencode.ai/zen/go/v1')

@@ -22,7 +22,7 @@ const KNOWN: readonly OpenCodeGoKnownModel[] = [
   { id: 'grok-4.6', name: 'Grok 4.6', contextWindow: 500_000, maxTokens: 500_000, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'high', family: 'grok' },
   { id: 'grok-4.5', name: 'Grok 4.5', contextWindow: 500_000, maxTokens: 500_000, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'high', family: 'grok' },
   { id: 'gpt-5.6-luna', name: 'GPT 5.6 Luna', contextWindow: 1_050_000, maxTokens: 128_000, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'max', family: 'gpt' },
-  { id: 'muse-spark-1.2-contributor', name: 'Muse Spark 1.2 Contributor', contextWindow: 1_048_576, maxTokens: 131_072, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'xhigh', family: 'muse' },
+  { id: 'muse-spark-1.2-contributor', name: 'Muse Spark 1.2 Contributor', contextWindow: 1_048_576, maxTokens: 131_072, api: 'openai-completions', vision: true, thinking: true, defaultEffort: 'xhigh', family: 'muse' },
   { id: 'glm-5.3-flash', name: 'GLM-5.3-Flash', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'glm' },
   { id: 'glm-5.3', name: 'GLM-5.3', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'max', family: 'glm' },
   { id: 'glm-5.2', name: 'GLM-5.2', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'max', family: 'glm' },
@@ -65,13 +65,13 @@ export function knownModel(id: string): OpenCodeGoKnownModel | undefined {
 
 /**
  * Infer the wire protocol from official docs, then prefix families for live-only ids.
- * Official mapping: grok/gpt/muse → Responses; MiniMax/Qwen → Messages; everything else → Completions.
+ * Official mapping: grok/gpt → Responses; MiniMax/Qwen → Messages; everything else → Completions.
  */
 export function protocolForModel(id: string): OpenCodeGoApi {
   const known = BY_ID.get(id)
   if (known !== undefined) return known.api
   const key = id.toLowerCase()
-  if (key.startsWith('grok-') || key.startsWith('gpt-') || key.startsWith('muse-')) return 'openai-responses'
+  if (key.startsWith('grok-') || key.startsWith('gpt-')) return 'openai-responses'
   if (key.startsWith('minimax-') || key.startsWith('qwen')) return 'anthropic-messages'
   return 'openai-completions'
 }
