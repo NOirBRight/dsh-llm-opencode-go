@@ -50,6 +50,8 @@ dsh web
 
 API Key 只存储在插件自己的凭据记录 `llm-opencode-go/opencode-go` 中，不会读取 DSH 进程环境变量或其他提供方的凭据引用。旧版基于环境变量的值不会迁移；请通过 OpenCode Go 卡片录入、替换或轮换密钥。
 
+聊天请求会附带 OpenCode 官方 Go 客户端使用的元数据（`x-opencode-client` 以及不透明的 session/request UUID）。`User-Agent` 仍由 Harness 统一负责归因。
+
 模型目录默认折叠，展开后一行一个模型：左侧把手可拖动排序（顺序随目录一起保存），右侧箭头展开该行的上下文和能力开关，垃圾桶按钮删除该行。
 
 ### 插件配置

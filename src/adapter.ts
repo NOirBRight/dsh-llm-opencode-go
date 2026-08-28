@@ -56,22 +56,38 @@ export interface OpenCodeGoAdapterOptions {
 export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = OPENCODE_GO_DEFAULT_STREAM_IDLE_TIMEOUT_MS
 export const DEFAULT_CONTEXT_WINDOW = OPENCODE_GO_DEFAULT_CONTEXT_WINDOW
 
+const MODEL_UNAVAILABLE_CODE = 'MODEL_UNAVAILABLE'
+
+function modelUnavailableMessage(message: string): boolean {
+  return /RegionError|model\s+(?:is\s+)?(?:not\s+available|unavailable)|not\s+available\s+in\s+your\s+country/iu.test(message)
+}
+
 /** Map an HTTP status to a stable LlmError code for source-compatible callers. */
 export function httpErrorCode(status: number, error?: WireError): string {
+  const type = error?.type?.toLowerCase()
+  if (type === 'regionerror' || type === 'modelunavailable' || type === 'model_unavailable'
+    || modelUnavailableMessage(error?.message ?? '')) return MODEL_UNAVAILABLE_CODE
   if (status === 401 || status === 403) return 'AUTH'
   if (status === 429) return 'RATE_LIMIT'
   if (status === 400) return 'INVALID_REQUEST'
   if (status >= 500) return 'SERVER'
-  void error
   return 'HTTP_' + status
 }
 
 /** Classify documented transient OpenCode Go failures that can arrive without an HTTP status. */
 export function classifyOpenCodeGoTransientError(chunk: StreamChunk): StreamChunk {
-  if (chunk.type !== 'finish' || chunk.reason.kind !== 'error' || chunk.reason.failure.code !== 'PI_AI_ERROR') {
+  if (chunk.type !== 'finish' || chunk.reason.kind !== 'error') {
     return chunk
   }
-  const message = chunk.reason.failure.message
+  const failure = chunk.reason.failure
+  const message = failure.message
+  if ((failure.code === 'AUTH' || failure.code === 'PI_AI_ERROR') && modelUnavailableMessage(message)) {
+    return {
+      ...chunk,
+      reason: { ...chunk.reason, failure: { ...failure, code: MODEL_UNAVAILABLE_CODE } },
+    }
+  }
+  if (failure.code !== 'PI_AI_ERROR') return chunk
   const code = /usage limit|quota|rate.?limit/iu.test(message)
     ? 'RATE_LIMIT'
     : /subscription required|unauthorized/iu.test(message)

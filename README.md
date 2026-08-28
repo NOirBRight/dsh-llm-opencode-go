@@ -50,6 +50,8 @@ When a key is stored, expanding the card refreshes subscription usage. With no k
 
 The API key is stored only in the plugin-owned credential record `llm-opencode-go/opencode-go`. It is not read from DSH process environment variables or another provider's credential reference. Values from the previous environment-based setup are intentionally not migrated; use the OpenCode Go card to enter, replace, or rotate the key.
 
+Chat requests include the OpenCode client metadata used by the first-party Go client (`x-opencode-client`, plus opaque session and request UUIDs). The Harness-owned `User-Agent` attribution remains unchanged.
+
 The model catalog starts collapsed and lists one row per model: a drag handle reorders rows (the order persists with the catalog), the chevron opens that row's context and capability flags, and the trash button removes it.
 
 ### Plugin configuration

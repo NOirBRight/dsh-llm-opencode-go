@@ -96,6 +96,9 @@ describe('llm-opencode-go real composition', () => {
     const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
     expect(result.finish).toEqual({ kind: 'stop' })
     expect(server.headers[0]?.authorization).toBe('Bearer isolated-test-key')
+    expect(server.headers[0]?.['x-opencode-client']).toBe('cli')
+    expect(server.headers[0]?.['x-opencode-session']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu)
+    expect(server.headers[0]?.['x-opencode-request']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu)
   })
 
   it('ignores ambient API keys outside its credential record', async () => {
