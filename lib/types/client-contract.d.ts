@@ -13,10 +13,16 @@ export declare const OPENCODE_GO_DEFAULT_CONTEXT_WINDOW = 262144;
 export declare const OPENCODE_GO_DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300000;
 /** Private Connection RPC channel used by this package's two runtime faces. */
 export declare const OPENCODE_GO_RPC_CHANNEL = "/opencode-go";
+/** Provider-management settings snapshot endpoint. */
+export declare const OPENCODE_GO_SETTINGS_READ_ENDPOINT = "settings/read";
 /** Rich model-discovery endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export declare const OPENCODE_GO_DISCOVER_ENDPOINT = "models/discover";
-/** Atomic settings-save endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
+/** Revision-fenced settings-save endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export declare const OPENCODE_GO_SAVE_ENDPOINT = "settings/save";
+/** Value-free credential status endpoint. */
+export declare const OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT = "credentials/status";
+/** One-way credential write endpoint. */
+export declare const OPENCODE_GO_CREDENTIAL_SET_ENDPOINT = "credentials/set";
 /** Subscription usage-snapshot endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export declare const OPENCODE_GO_USAGE_ENDPOINT = "usage/read";
 /** Wire protocol selected for one OpenCode Go model. */
@@ -77,8 +83,6 @@ export interface OpenCodeGoSaveRequest {
     models: OpenCodeGoCatalogModelConfig[];
     /** Settings descriptor revision from which the editor began. */
     expectedRevision: number;
-    /** Typed key stored by the Host credentials service; omitted when unchanged. */
-    apiKey?: string;
 }
 /** Accepted settings snapshot returned after one atomic Host mutation. */
 export interface OpenCodeGoSaveResult {
@@ -86,6 +90,16 @@ export interface OpenCodeGoSaveResult {
     settings: OpenCodeGoSettingsView;
     /** New descriptor revision accepted by the Host. */
     revision: number;
+}
+/** Secret-free provider settings and credential snapshot. */
+export interface OpenCodeGoSettingsReadResult extends OpenCodeGoSaveResult {
+    credential: {
+        configured: boolean;
+        writable: boolean;
+    };
+}
+export interface OpenCodeGoCredentialSetRequest {
+    apiKey: string;
 }
 /** One model's accounted requests inside a usage window. */
 export interface OpenCodeGoUsageModelCount {
@@ -131,6 +145,9 @@ export declare function decodeOpenCodeGoDiscoveryRequest(value: unknown): OpenCo
 export declare function decodeOpenCodeGoDiscoveryResult(value: unknown): OpenCodeGoDiscoveryResult | undefined;
 /** Narrow the atomic save request. */
 export declare function decodeOpenCodeGoSaveRequest(value: unknown): OpenCodeGoSaveRequest | undefined;
+/** Decode provider settings/credential management snapshot. */
+export declare function decodeOpenCodeGoSettingsReadResult(value: unknown): OpenCodeGoSettingsReadResult | undefined;
+export declare function decodeOpenCodeGoCredentialSetRequest(value: unknown): OpenCodeGoCredentialSetRequest | undefined;
 /** Narrow the Host save reply. */
 export declare function decodeOpenCodeGoSaveResult(value: unknown): OpenCodeGoSaveResult | undefined;
 /** Decode the secret-free usage snapshot returned by the Host. */

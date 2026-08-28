@@ -26,6 +26,11 @@ const LOW_MEDIUM_HIGH_XHIGH_MAX = pin({ low: 'low', medium: 'medium', high: 'hig
 const MINIMAL_TO_XHIGH = pin({ minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh' })
 const GENERIC = pin({ off: 'none', low: 'low', medium: 'medium', high: 'high', max: 'max' })
 
+/** Canonical ordering used by pi-ai and the settings UI. */
+export const OPENCODE_GO_EFFORT_ORDER: readonly ModelThinkingLevel[] = [
+  'off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max',
+] as const
+
 interface FamilyPolicy {
   levels: ThinkingLevelMap
   defaultEffort?: ModelThinkingLevel
@@ -34,18 +39,28 @@ interface FamilyPolicy {
 const FAMILIES: Partial<Record<ReturnType<typeof familyForModel>, FamilyPolicy>> = {
   grok: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
   gpt: { levels: LOW_MEDIUM_HIGH_XHIGH_MAX, defaultEffort: 'medium' },
-  muse: { levels: MINIMAL_TO_XHIGH, defaultEffort: 'medium' },
+  muse: { levels: MINIMAL_TO_XHIGH, defaultEffort: 'xhigh' },
   glm: { levels: OFF_HIGH_MAX, defaultEffort: 'max' },
   kimi: { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'max' },
   qwen: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
-  deepseek: { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'high' },
-  mimo: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'medium' },
+  deepseek: { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'max' },
+  mimo: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
   hy3: { levels: pin({ off: 'none', low: 'low', high: 'high' }), defaultEffort: 'high' },
-  longcat: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'medium' },
+  minimax: { levels: GENERIC, defaultEffort: 'max' },
+  longcat: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
 }
 
 function policyFor(model: string): FamilyPolicy {
-  return FAMILIES[familyForModel(model)] ?? { levels: GENERIC }
+  return FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
+}
+
+/** Supported thinking levels for one catalog row, in canonical order. */
+export function openCodeGoSupportedEfforts(
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'>,
+): readonly ModelThinkingLevel[] {
+  if (model.thinking !== true) return []
+  const levels = policyFor(model.id).levels
+  return OPENCODE_GO_EFFORT_ORDER.filter(level => levels[level] !== null && levels[level] !== undefined)
 }
 
 /** Thinking-level map for one catalog row, or undefined when thinking is off. */
@@ -57,6 +72,11 @@ export function openCodeGoThinkingLevelMap(model: OpenCodeGoCatalogModelConfig):
 /** Plugin-owned default effort for a known family. */
 export function openCodeGoDefaultEffort(model: string): ModelThinkingLevel | undefined {
   return policyFor(model).defaultEffort
+}
+
+/** Display name for one effort id (e.g. "high" -> "High", "xhigh" -> "Xhigh"). */
+export function formatEffortName(level: ModelThinkingLevel): string {
+  return level.charAt(0).toUpperCase() + level.slice(1)
 }
 
 /** Attach the family or row default to a resolved model when that level is offered. */

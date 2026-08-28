@@ -16,6 +16,7 @@ import type {
 
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
+import { formatEffortName, openCodeGoDefaultEffort, openCodeGoSupportedEfforts } from '../reasoning.ts'
 import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
 import type {} from './provider-section.ts'
 import { SortableList } from './SortableList.tsx'
@@ -136,6 +137,20 @@ const inputStyle: CSSProperties = {
   background: 'var(--dsw-alias-bg-layer-1)',
   color: 'var(--dsw-alias-label-primary)',
   font: 'inherit',
+}
+const selectStyle: CSSProperties = {
+  boxSizing: 'border-box',
+  minHeight: 32,
+  border: '1px solid var(--dsw-alias-border-l2)',
+  borderRadius: 8,
+  padding: '4px 28px 4px 10px',
+  backgroundColor: 'var(--dsw-alias-bg-layer-1)',
+  color: 'var(--dsw-alias-label-primary)',
+  font: 'inherit',
+  appearance: 'none',
+  backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 8px center',
 }
 const rowInputStyle: CSSProperties = { ...inputStyle, minHeight: 32, padding: '4px 10px' }
 const rowStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }
@@ -488,7 +503,17 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       models: draft.models.map((model, at) => {
         if (at !== index) return model
         const next: ModelDraft = { ...model }
-        if (patch.id !== undefined) next.id = patch.id
+        if (patch.id !== undefined) {
+          next.id = patch.id
+          if (next.thinking === true && next.defaultEffort !== undefined) {
+            const supported = openCodeGoSupportedEfforts({ id: next.id, thinking: true })
+            if (!supported.includes(next.defaultEffort as unknown as ReturnType<typeof openCodeGoSupportedEfforts>[number])) {
+              const fallback = openCodeGoDefaultEffort(next.id) ?? supported[0]
+              if (fallback !== undefined) next.defaultEffort = fallback
+              else delete next.defaultEffort
+            }
+          }
+        }
         if ('name' in patch) {
           if (patch.name === undefined) delete next.name
           else next.name = patch.name
@@ -506,6 +531,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           if (patch.thinking === undefined) delete next.thinking
           else next.thinking = patch.thinking
           if (patch.thinking !== true) delete next.defaultEffort
+          else if (next.defaultEffort === undefined) {
+            const fallback = openCodeGoDefaultEffort(next.id)
+              ?? openCodeGoSupportedEfforts({ id: next.id, thinking: true })[0]
+            if (fallback !== undefined) next.defaultEffort = fallback
+          }
         }
         if ('defaultEffort' in patch) {
           if (patch.defaultEffort === undefined) delete next.defaultEffort
@@ -898,6 +928,24 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                         <div style={capabilitiesStyle}>
                                           <Capability label={t('vision')} checked={model.vision === true} disabled={disabled} onChange={(vision) => { patchModel(index, { vision }) }} />
                                           <Capability label={t('thinking')} checked={model.thinking === true} disabled={disabled} onChange={(thinking) => { patchModel(index, { thinking }) }} />
+                                          {model.thinking === true
+                                            ? (
+                                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, ...labelStyle }}>
+                                                <span style={labelStyle}>{t('defaultEffort')}</span>
+                                                <select
+                                                  style={selectStyle}
+                                                  value={model.defaultEffort ?? openCodeGoDefaultEffort(model.id) ?? openCodeGoSupportedEfforts({ id: model.id, thinking: true })[0] ?? ''}
+                                                  disabled={disabled}
+                                                  onChange={(event) => { patchModel(index, { defaultEffort: event.target.value || undefined }) }}
+                                                  aria-label={t('defaultEffort')}
+                                                >
+                                                  {openCodeGoSupportedEfforts({ id: model.id, thinking: true }).map(level => (
+                                                    <option key={level} value={level}>{formatEffortName(level)}</option>
+                                                  ))}
+                                                </select>
+                                              </label>
+                                            )
+                                            : null}
                                         </div>
                                       </div>
                                     )

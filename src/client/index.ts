@@ -1,6 +1,6 @@
 /** Browser half: OpenCode Go setup inside Plugin configuration. */
 
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext, SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -11,12 +11,14 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import {
   decodeOpenCodeGoDiscoveryResult,
   decodeOpenCodeGoSaveResult,
-  decodeOpenCodeGoSettings,
+  decodeOpenCodeGoSettingsReadResult,
   decodeOpenCodeGoUsageReply,
-  DEFAULT_API_KEY_ENV,
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_SAVE_ENDPOINT,
+  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
@@ -39,7 +41,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Stable browser-plugin name. */
 export const name = 'dsh-llm-opencode-go-client'
 /** Client services required by the Plugin configuration contribution. */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+export const inject = ['slots', 'locale', 'connection', 'remote']
 
 /** Register localized OpenCode Go configuration under Plugin configuration. */
 export function apply(ctx: ClientContext): void {
@@ -49,24 +51,34 @@ export function apply(ctx: ClientContext): void {
     'dsh-llm-opencode-go: Plugin configuration copy',
   )
   const t = ctx.locale.bind(localeNamespace) as OpenCodeGoPluginCardFace['t']
-  const scope = ctx.settingsScope.bind<OpenCodeGoSettingsView>({
-    namespace: OPENCODE_GO_SETTINGS_NAMESPACE,
-    decode: decodeOpenCodeGoSettings,
-  })
+  let snapshot: SettingsScopeSnapshot<OpenCodeGoSettingsView> = { status: 'loading', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }
+  const listeners = new Set<() => void>()
+  const scope: SettingsScope<OpenCodeGoSettingsView> = {
+    getSnapshot: () => snapshot,
+    subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
+    set: async () => undefined,
+    unset: async () => undefined,
+  }
+  const updateSnapshot = (next: SettingsScopeSnapshot<OpenCodeGoSettingsView>): void => { snapshot = next; listeners.forEach(listener => { listener() }) }
   const picker = new OpenCodeGoModelPickerController()
   // This dual-runtime package compiles Host and Client Context augmentations in
   // one project; the browser entry receives the client handle at runtime.
-  const { api: connectionApi, rpc } = ctx.get('connection') as unknown as ConnectionHandle
+  const { rpc } = ctx.get('connection') as unknown as ConnectionHandle
+
+  const readManagement = async (): Promise<void> => {
+    const result = await callPlugin(OPENCODE_GO_SETTINGS_READ_ENDPOINT, {})
+    if (!result.ok) { updateSnapshot({ ...snapshot, status: 'unavailable' }); throw new Error(result.error.message) }
+    const decoded = decodeOpenCodeGoSettingsReadResult(result.value)
+    if (decoded === undefined) { updateSnapshot({ ...snapshot, status: 'unavailable' }); throw new Error(t('requestFailed')) }
+    updateSnapshot({ status: 'ready', value: decoded.settings, base: decoded.settings, user: decoded.settings, revision: decoded.revision, writable: true, mode: 'host' })
+  }
 
   const describeCredential: OpenCodeGoPluginCardFace['describeCredential'] = async () => {
-    const ref = scope.getSnapshot().value?.apiKeyEnv ?? DEFAULT_API_KEY_ENV
-    const response = await connectionApi.credentials.describe({ refs: [ref] })
-    if (!response.result.ok) throw new Error(response.result.error.message)
-    const credential = response.result.value.credentials[ref]
-    return {
-      configured: credential?.configured ?? false,
-      writable: credential?.writable ?? true,
-    }
+    const result = await callPlugin(OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT, {})
+    if (!result.ok) throw new Error(result.error.message)
+    const credential = result.value as { configured?: unknown, writable?: unknown }
+    if (typeof credential.configured !== 'boolean' || typeof credential.writable !== 'boolean') throw new Error(t('requestFailed'))
+    return { configured: credential.configured, writable: credential.writable }
   }
 
   const callPlugin = async (endpoint: string, payload: unknown) => {
@@ -82,14 +94,16 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
+  void Promise.resolve().then(readManagement).catch(() => undefined)
+
   const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
-    const snapshot = scope.getSnapshot()
-    if (snapshot.revision === undefined) throw new Error(t('requestFailed'))
+    if (apiKey !== undefined) await storeApiKey(apiKey)
+    const current = scope.getSnapshot()
+    if (current.revision === undefined) throw new Error(t('requestFailed'))
     const result = await callPlugin(OPENCODE_GO_SAVE_ENDPOINT, {
       baseURL: settings.baseURL,
       models: settings.models,
-      expectedRevision: snapshot.revision,
-      ...(apiKey === undefined ? {} : { apiKey }),
+      expectedRevision: current.revision,
     })
     if (!result.ok) throw new Error(result.error.message)
     const accepted = decodeOpenCodeGoSaveResult(result.value)
@@ -98,9 +112,9 @@ export function apply(ctx: ClientContext): void {
   }
 
   const storeApiKey: OpenCodeGoPluginCardFace['storeApiKey'] = async (value) => {
-    const snapshot = scope.getSnapshot()
-    if (snapshot.value === undefined || snapshot.revision === undefined) throw new Error(t('requestFailed'))
-    await saveConfiguration(snapshot.value, value)
+    if (value.trim().length === 0) throw new Error(t('invalidApiKey'))
+    const result = await callPlugin(OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, { apiKey: value })
+    if (!result.ok) throw new Error(result.error.message)
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {

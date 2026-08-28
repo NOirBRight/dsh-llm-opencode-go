@@ -21,7 +21,7 @@ dsh web
 
 ## Web 配置
 
-打开 Settings → LLM Providers → OpenCode Go。卡片通过 Harness credentials API 把 API key 存到 `OPENCODE_API_KEY`；Host 不会返回已保存的明文。Save / Fetch models / 用量 RPC 仅 loopback，写入新 key 请用 http://127.0.0.1:&lt;端口&gt;。已存 key 的聊天可以从 trusted-host 域名使用。
+打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。默认仅 loopback。外部认证部署请设置 `remoteManagement: true`，并用 `dsh web --trusted-host <host>` 启动（或使用 SSH 转发）；修改后必须重启 `dsh web`。
 
 卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用文档目录补全 context window、vision、thinking 以及 Completions / Responses / Messages。
 
@@ -57,6 +57,7 @@ Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 
   name: dsh-llm-opencode-go
   config:
     apiKeyEnv: OPENCODE_API_KEY
+    remoteManagement: false
     baseURL: https://opencode.ai/zen/go/v1
     defaultContextWindow: 262144
     streamIdleTimeoutMs: 300000
@@ -93,7 +94,7 @@ Usage 映射成 Harness input/output。pi-ai 按 context capacity clamp maxToken
 
 ## 已知限制
 
-- Save、Fetch models、用量 Refresh 走 loopback RPC。已存 key 的聊天可以从 trusted-host 域名使用；写入新 key 必须在 http://127.0.0.1:&lt;端口&gt;。
+- Provider 管理默认仅限 loopback。请先配置外部认证和 `dsh web --trusted-host <host>`，再设置 `remoteManagement: true` 并重启 DSH；也可以继续使用 SSH 端口转发。
 - CodexHub 留下的 `~/.dsh/.credentials.yaml.lock`（`codexhub-atomic-lock=1`）会卡住所有 DSH `credentials.set`，需删掉该 sidecar。见 CodexHub `docs/tasks/dsh-credentials-lock-interop.md`。
 - 本包不为 `opencode-go` 调用 `registerConfigurableProviders`（与 llm-pi-ai 目录冲突）。
 - 共享 PiAiAdapter 不支持 GenerateOptions.stop。

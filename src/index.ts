@@ -23,14 +23,18 @@ import type { OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adap
 import { PUBLIC_BASE_URL, discoverModels } from './discovery.ts'
 import { OPENCODE_GO_USAGE_UNSUPPORTED, readOpenCodeGoUsage } from './usage.ts'
 import {
+  decodeOpenCodeGoCredentialSetRequest,
   decodeOpenCodeGoDiscoveryRequest,
   decodeOpenCodeGoSaveRequest,
   decodeOpenCodeGoSettings,
   DEFAULT_API_KEY_ENV,
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_PROVIDER,
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_SAVE_ENDPOINT,
+  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from './client-contract.ts'
@@ -53,16 +57,21 @@ export {
 export type { OpenCodeGoUsageRequest } from './usage.ts'
 export {
   DEFAULT_API_KEY_ENV,
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_PROVIDER,
   OPENCODE_GO_PUBLIC_BASE_URL,
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_SAVE_ENDPOINT,
+  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
   decodeOpenCodeGoCatalogModel,
+  decodeOpenCodeGoCredentialSetRequest,
   decodeOpenCodeGoDiscoveryRequest,
   decodeOpenCodeGoDiscoveryResult,
+  decodeOpenCodeGoSettingsReadResult,
   decodeOpenCodeGoSaveRequest,
   decodeOpenCodeGoSaveResult,
   decodeOpenCodeGoSettings,
@@ -98,6 +107,7 @@ export interface Config {
   defaultContextWindow?: number
   streamIdleTimeoutMs?: number
   retryPolicy?: RetryPolicyConfig
+  remoteManagement?: boolean
 }
 
 const catalogModel: z<OpenCodeGoCatalogModel> = z.object({
@@ -121,6 +131,7 @@ export const Config: z<Config> = z.object({
   defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW),
   streamIdleTimeoutMs: z.number().min(Number.MIN_VALUE).max(MAX_TIMER_DELAY_MS).default(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
   retryPolicy: RetryPolicySchema,
+  remoteManagement: z.boolean().default(false),
 })
 
 export type ResolvedOpenCodeGoOptions = OpenCodeGoConnectionOptions
@@ -274,6 +285,13 @@ export function apply(ctx: Context, config: Config): void {
     if (credentials !== undefined) return (await credentials.resolve(ref))?.value
     return launchEnvironmentOf(ctx).get(ref)?.value
   }
+  const credentialStatus = async (): Promise<{ configured: boolean, writable: boolean }> => {
+    const credentials = ctx.get('credentials')
+    if (credentials === undefined) return { configured: false, writable: false }
+    const info = await credentials.describe(options().apiKeyEnv)
+    return { configured: info.configured, writable: info.writable }
+  }
+
   // Host Models-page discovery may include a draft apiKey on LlmModelDiscoveryRequest.
   // The plugin browser RPC never forwards secrets; it only uses storedApiKey.
   ctx.llm.registerModelDiscovery(NS, request => discoverModels(request, storedApiKey))
@@ -282,6 +300,23 @@ export function apply(ctx: Context, config: Config): void {
     connectionCtx.connection.rpc.handle(
       OPENCODE_GO_RPC_CHANNEL,
       async (endpoint, payload, signal) => {
+        if (endpoint === OPENCODE_GO_SETTINGS_READ_ENDPOINT) {
+          const descriptor = ctx.get('settings')?.describe().find(item => item.ns === NS)
+          const settings = decodeOpenCodeGoSettings(descriptor?.value)
+          if (descriptor === undefined || settings === undefined) return settingsFailure('OpenCode Go settings are unavailable')
+          return { ok: true as const, value: { settings, revision: descriptor.revision, credential: await credentialStatus() } }
+        }
+        if (endpoint === OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT) {
+          return { ok: true as const, value: await credentialStatus() }
+        }
+        if (endpoint === OPENCODE_GO_CREDENTIAL_SET_ENDPOINT) {
+          const request = decodeOpenCodeGoCredentialSetRequest(payload)
+          if (request === undefined) return settingsFailure('invalid OpenCode Go credential request')
+          const credentials = ctx.get('credentials')
+          if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
+          await credentials.set(options().apiKeyEnv, request.apiKey)
+          return { ok: true as const, value: await credentialStatus() }
+        }
         if (endpoint === OPENCODE_GO_DISCOVER_ENDPOINT) {
           const request = decodeOpenCodeGoDiscoveryRequest(payload)
           if (request === undefined) return discoveryFailure('invalid OpenCode Go discovery request')
@@ -314,21 +349,6 @@ export function apply(ctx: Context, config: Config): void {
               ops.push({ op: 'set', path: ['models'], value: request.models })
             }
             if (ops.length > 0) await settings.mutate(NS, ops, request.expectedRevision)
-            if (request.apiKey !== undefined) {
-              const credentials = ctx.get('credentials')
-              if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
-              try {
-                await credentials.set(options().apiKeyEnv, request.apiKey)
-              } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : 'credential write failed'
-                if (message.includes('writer lock')) {
-                  return settingsFailure(
-                    'Could not store the API key because ~/.dsh/.credentials.yaml.lock is held. Delete that stale lock file and retry.',
-                  )
-                }
-                return settingsFailure(message)
-              }
-            }
             const accepted = settings.describe().find(descriptor => descriptor.ns === NS)
             const acceptedSettings = decodeOpenCodeGoSettings(accepted?.value)
             if (accepted === undefined || acceptedSettings === undefined) {
@@ -355,7 +375,7 @@ export function apply(ctx: Context, config: Config): void {
         }
         return settingsFailure('unknown OpenCode Go endpoint: ' + endpoint)
       },
-      { authority: 'loopback' },
+      { authority: config.remoteManagement === true ? 'trusted-host' : 'loopback' },
     )
   })
 

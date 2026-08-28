@@ -16,10 +16,16 @@ export const OPENCODE_GO_DEFAULT_CONTEXT_WINDOW = 262_144
 export const OPENCODE_GO_DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000
 /** Private Connection RPC channel used by this package's two runtime faces. */
 export const OPENCODE_GO_RPC_CHANNEL = '/opencode-go'
+/** Provider-management settings snapshot endpoint. */
+export const OPENCODE_GO_SETTINGS_READ_ENDPOINT = 'settings/read'
 /** Rich model-discovery endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export const OPENCODE_GO_DISCOVER_ENDPOINT = 'models/discover'
-/** Atomic settings-save endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
+/** Revision-fenced settings-save endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export const OPENCODE_GO_SAVE_ENDPOINT = 'settings/save'
+/** Value-free credential status endpoint. */
+export const OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT = 'credentials/status'
+/** One-way credential write endpoint. */
+export const OPENCODE_GO_CREDENTIAL_SET_ENDPOINT = 'credentials/set'
 /** Subscription usage-snapshot endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
 export const OPENCODE_GO_USAGE_ENDPOINT = 'usage/read'
 
@@ -86,8 +92,6 @@ export interface OpenCodeGoSaveRequest {
   models: OpenCodeGoCatalogModelConfig[]
   /** Settings descriptor revision from which the editor began. */
   expectedRevision: number
-  /** Typed key stored by the Host credentials service; omitted when unchanged. */
-  apiKey?: string
 }
 
 /** Accepted settings snapshot returned after one atomic Host mutation. */
@@ -97,6 +101,13 @@ export interface OpenCodeGoSaveResult {
   /** New descriptor revision accepted by the Host. */
   revision: number
 }
+
+/** Secret-free provider settings and credential snapshot. */
+export interface OpenCodeGoSettingsReadResult extends OpenCodeGoSaveResult {
+  credential: { configured: boolean, writable: boolean }
+}
+
+export interface OpenCodeGoCredentialSetRequest { apiKey: string }
 
 /** One model's accounted requests inside a usage window. */
 export interface OpenCodeGoUsageModelCount {
@@ -241,13 +252,23 @@ export function decodeOpenCodeGoSaveRequest(value: unknown): OpenCodeGoSaveReque
     if (model === undefined) return undefined
     models.push(model)
   }
-  if (value.apiKey !== undefined && (typeof value.apiKey !== 'string' || value.apiKey.length === 0)) return undefined
   return {
     baseURL: value.baseURL,
     models,
     expectedRevision: expectedRevision as number,
-    ...(value.apiKey === undefined ? {} : { apiKey: value.apiKey }),
   }
+}
+
+/** Decode provider settings/credential management snapshot. */
+export function decodeOpenCodeGoSettingsReadResult(value: unknown): OpenCodeGoSettingsReadResult | undefined {
+  if (!isJsonRecord(value) || !isJsonRecord(value.credential)) return undefined
+  const base = decodeOpenCodeGoSaveResult(value)
+  if (base === undefined || typeof value.credential.configured !== 'boolean' || typeof value.credential.writable !== 'boolean') return undefined
+  return { ...base, credential: { configured: value.credential.configured, writable: value.credential.writable } }
+}
+
+export function decodeOpenCodeGoCredentialSetRequest(value: unknown): OpenCodeGoCredentialSetRequest | undefined {
+  return isJsonRecord(value) && typeof value.apiKey === 'string' && value.apiKey.trim().length > 0 ? { apiKey: value.apiKey } : undefined
 }
 
 /** Narrow the Host save reply. */

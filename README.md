@@ -21,7 +21,7 @@ Put this plugin **before** other LLM provider plugins in the profile bundle list
 
 ## Web configuration
 
-Open Settings → LLM Providers → OpenCode Go. The card stores the API key through the Harness credentials API under `OPENCODE_API_KEY`; the Host never returns the stored literal. Save, Fetch models, and usage RPC are loopback-only — write a new key from http://127.0.0.1:&lt;port&gt;. Chat with an already stored key works from a trusted-host URL.
+Open Settings → LLM Providers → OpenCode Go. The provider-management RPC returns only decoded settings, revision, and value-free credential status; API keys are write-only and never echoed or logged. By default management is loopback-only. For an externally authenticated deployment, set `remoteManagement: true` and start DSH with an explicit `dsh web --trusted-host <host>` (or use SSH forwarding). Restart `dsh web` after changing this setting.
 
 The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` and enriches ids with the documented catalog (context window, vision, thinking, and Completions / Responses / Messages).
 
@@ -57,6 +57,7 @@ Official provider documentation: https://opencode.ai/docs/zh-cn/go/
   name: dsh-llm-opencode-go
   config:
     apiKeyEnv: OPENCODE_API_KEY
+    remoteManagement: false
     baseURL: https://opencode.ai/zen/go/v1
     defaultContextWindow: 262144
     streamIdleTimeoutMs: 300000
@@ -93,7 +94,7 @@ Usage maps to Harness input/output counts. maxTokens is clamped against the conf
 
 ## Known limitations
 
-- Save, Fetch models, and usage Refresh use a loopback RPC. Chat with an already stored key works from a trusted-host URL; writing a new key must be done on http://127.0.0.1:&lt;port&gt;.
+- Provider management defaults to loopback. Enable `remoteManagement: true` only behind external authentication and an explicit `dsh web --trusted-host <host>`; restart DSH after changing it. SSH port forwarding remains the safest alternative.
 - A leftover `~/.dsh/.credentials.yaml.lock` written by CodexHub (`codexhub-atomic-lock=1`) blocks every DSH `credentials.set` until the sidecar is deleted. See CodexHub `docs/tasks/dsh-credentials-lock-interop.md`.
 - This package does not call `registerConfigurableProviders` for `opencode-go` (duplicate directory with llm-pi-ai).
 - GenerateOptions.stop is not supported by the shared PiAiAdapter.

@@ -84,7 +84,7 @@ async function bench() {
 
 describe('OpenCode Go client plugin registration', () => {
   it('declares only the client services it consumes', () => {
-    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'settingsScope'])
+    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote'])
   })
 
   it('registers the card and frame picker, then removes both with the plugin fiber', async () => {
