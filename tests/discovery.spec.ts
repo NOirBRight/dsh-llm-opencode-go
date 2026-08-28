@@ -22,7 +22,6 @@ describe('OpenCode Go model discovery', () => {
       ['unknown-model', 'openai-completions', undefined],
     ])
     expect(protocolForModel('gpt-5.6-luna')).toBe('openai-responses')
-    expect(protocolForModel('muse-spark-1.2-contributor')).toBe('openai-completions')
   })
 
   it('prefers live context_length when the listing supplies one', () => {

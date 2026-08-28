@@ -16,7 +16,7 @@ export interface OpenCodeGoKnownModel {
 export declare function knownModel(id: string): OpenCodeGoKnownModel | undefined;
 /**
  * Infer the wire protocol from official docs, then prefix families for live-only ids.
- * Official mapping: grok/gpt → Responses; MiniMax/Qwen → Messages; everything else → Completions.
+ * Official mapping: grok/gpt/muse → Responses; MiniMax/Qwen → Messages; everything else → Completions.
  */
 export declare function protocolForModel(id: string): OpenCodeGoApi;
 /** Family used only by the picker overlay. */
