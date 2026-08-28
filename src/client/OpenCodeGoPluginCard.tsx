@@ -16,7 +16,7 @@ import type {
 
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
-import { formatEffortName, openCodeGoDefaultEffort, openCodeGoSupportedEfforts } from '../reasoning.ts'
+import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
 import type {} from './provider-section.ts'
 import { SortableList } from './SortableList.tsx'
@@ -505,13 +505,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
         const next: ModelDraft = { ...model }
         if (patch.id !== undefined) {
           next.id = patch.id
-          if (next.thinking === true && next.defaultEffort !== undefined) {
-            const supported = openCodeGoSupportedEfforts({ id: next.id, thinking: true })
-            if (!supported.includes(next.defaultEffort as unknown as ReturnType<typeof openCodeGoSupportedEfforts>[number])) {
-              const fallback = openCodeGoDefaultEffort(next.id) ?? supported[0]
-              if (fallback !== undefined) next.defaultEffort = fallback
-              else delete next.defaultEffort
-            }
+          if (next.thinking === true && next.defaultEffort !== undefined && !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true, defaultEffort: next.defaultEffort })
+              ?? resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
+            if (fallback !== undefined) next.defaultEffort = fallback
+            else delete next.defaultEffort
           }
         }
         if ('name' in patch) {
@@ -531,10 +529,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           if (patch.thinking === undefined) delete next.thinking
           else next.thinking = patch.thinking
           if (patch.thinking !== true) delete next.defaultEffort
-          else if (next.defaultEffort === undefined) {
-            const fallback = openCodeGoDefaultEffort(next.id)
-              ?? openCodeGoSupportedEfforts({ id: next.id, thinking: true })[0]
+          else if (next.defaultEffort === undefined || !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
             if (fallback !== undefined) next.defaultEffort = fallback
+            else delete next.defaultEffort
           }
         }
         if ('defaultEffort' in patch) {
@@ -934,7 +932,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                                 <span style={labelStyle}>{t('defaultEffort')}</span>
                                                 <select
                                                   style={selectStyle}
-                                                  value={model.defaultEffort ?? openCodeGoDefaultEffort(model.id) ?? openCodeGoSupportedEfforts({ id: model.id, thinking: true })[0] ?? ''}
+                                                  value={resolveEffectiveDefaultEffort(model) ?? ''}
                                                   disabled={disabled}
                                                   onChange={(event) => { patchModel(index, { defaultEffort: event.target.value || undefined }) }}
                                                   aria-label={t('defaultEffort')}

@@ -79,6 +79,28 @@ export function formatEffortName(level: ModelThinkingLevel): string {
   return level.charAt(0).toUpperCase() + level.slice(1)
 }
 
+/** Effective default for a draft row: explicit if valid, else family default, else first supported. */
+export function resolveEffectiveDefaultEffort(
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'> & { defaultEffort?: string },
+): ModelThinkingLevel | undefined {
+  if (model.thinking !== true) return undefined
+  const explicit = model.defaultEffort as ModelThinkingLevel | undefined
+  if (explicit !== undefined) {
+    const supported = openCodeGoSupportedEfforts(model)
+    if ((supported as readonly string[]).includes(explicit)) return explicit
+  }
+  return openCodeGoDefaultEffort(model.id) ?? openCodeGoSupportedEfforts(model)[0]
+}
+
+/** Whether an explicit effort is valid for the model's family. */
+export function isValidEffortForModel(
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'>,
+  effort: string,
+): boolean {
+  if (model.thinking !== true) return false
+  return (openCodeGoSupportedEfforts(model) as readonly string[]).includes(effort)
+}
+
 /** Attach the family or row default to a resolved model when that level is offered. */
 export function applyOpenCodeGoReasoningMetadata(
   info: LlmResolvedModelInfo,

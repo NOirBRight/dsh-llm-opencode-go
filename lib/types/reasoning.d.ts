@@ -12,6 +12,12 @@ export declare function openCodeGoThinkingLevelMap(model: OpenCodeGoCatalogModel
 export declare function openCodeGoDefaultEffort(model: string): ModelThinkingLevel | undefined;
 /** Display name for one effort id (e.g. "high" -> "High", "xhigh" -> "Xhigh"). */
 export declare function formatEffortName(level: ModelThinkingLevel): string;
+/** Effective default for a draft row: explicit if valid, else family default, else first supported. */
+export declare function resolveEffectiveDefaultEffort(model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'> & {
+    defaultEffort?: string;
+}): ModelThinkingLevel | undefined;
+/** Whether an explicit effort is valid for the model's family. */
+export declare function isValidEffortForModel(model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'>, effort: string): boolean;
 /** Attach the family or row default to a resolved model when that level is offered. */
 export declare function applyOpenCodeGoReasoningMetadata(info: LlmResolvedModelInfo, model: string, override?: string): LlmResolvedModelInfo;
 //# sourceMappingURL=reasoning.d.ts.map
