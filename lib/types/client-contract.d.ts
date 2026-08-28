@@ -3,8 +3,6 @@
 export declare const OPENCODE_GO_SETTINGS_NAMESPACE = "llm-opencode-go";
 /** Provider route owned by the OpenCode Go plugin. */
 export declare const OPENCODE_GO_PROVIDER = "opencode-go";
-/** Credential reference used when the settings section names none. */
-export declare const DEFAULT_API_KEY_ENV = "OPENCODE_API_KEY";
 /** Public OpenCode Go API base URL. */
 export declare const OPENCODE_GO_PUBLIC_BASE_URL = "https://opencode.ai/zen/go/v1";
 /** Default context capacity for models without documented or discovered metadata. */
@@ -52,8 +50,6 @@ export interface OpenCodeGoCatalogModelConfig {
 }
 /** Settings fields presented by the package's Web configuration card. */
 export interface OpenCodeGoSettingsView {
-    /** Credential reference resolved by the Host. */
-    apiKeyEnv: string;
     /** Go API base URL ending in /zen/go/v1. */
     baseURL: string;
     /** Advisory model catalog. */

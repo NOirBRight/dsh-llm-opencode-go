@@ -5,7 +5,6 @@
  */
 import { LlmAdapter } from '@deepseek-ai/dsh-llm';
 import type { GenerateOptions, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials';
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment';
 import { discoverModels } from './discovery.ts';
 import type { OpenCodeGoCatalogModelConfig } from './client-contract.ts';
@@ -15,8 +14,6 @@ export type OpenCodeGoCatalogModel = OpenCodeGoCatalogModelConfig;
 export interface OpenCodeGoConnectionOptions {
     /** Go API base, including /zen/go/v1. */
     baseURL: string;
-    /** Credential reference of this same resolution, resolved per request. */
-    apiKeyEnv: CredentialRef;
     /** Models exposed to discovery consumers and accepted for chat requests. */
     models: readonly OpenCodeGoCatalogModel[];
     /** Positive context capacity used when the selected model has no exact value. */
@@ -31,7 +28,7 @@ export interface OpenCodeGoConnectionOptions {
 /** Constructor options for OpenCodeGoAdapter. */
 export interface OpenCodeGoAdapterOptions {
     options: () => OpenCodeGoConnectionOptions;
-    resolveApiKey: (connection: OpenCodeGoConnectionOptions) => Promise<string>;
+    resolveApiKey: () => Promise<string>;
     resolveAttachments?: () => AttachmentStore | undefined;
 }
 export declare const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300000;

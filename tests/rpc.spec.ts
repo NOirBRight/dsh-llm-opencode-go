@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
+import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { CredentialKey, CredentialRecord } from '@deepseek-ai/dsh-credentials'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import { apply, Config, inject } from '../src/index.ts'
 import {
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_USAGE_ENDPOINT,
@@ -24,7 +28,9 @@ describe('OpenCode Go rich-discovery RPC', () => {
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
     ctx.provide('credentials', {
-      resolve: async () => ({ value: 'stored-key' }),
+      readRecord: async (recordKey: CredentialKey) => recordKey === credentialKey('llm-opencode-go', 'opencode-go')
+        ? { kind: 'api-key', key: 'stored-key' }
+        : undefined,
     } as never)
     const fiber = ctx.plugin({ inject: [...inject], Config, apply }, {})
     await fiber.await()
@@ -54,6 +60,61 @@ describe('OpenCode Go rich-discovery RPC', () => {
     await ctx.fiber.dispose()
   })
 
+  it('reports and stores the plugin-owned API key record', async () => {
+    type Handler = (
+      endpoint: string,
+      payload: unknown,
+      signal: AbortSignal,
+    ) => Promise<{ ok: boolean; value?: unknown; error?: unknown }>
+    const key = credentialKey('llm-opencode-go', 'opencode-go')
+    const records = new Map<CredentialKey, CredentialRecord>([[key, { kind: 'api-key', key: 'stored-key' }]])
+    const ctx = new Context()
+    await ctx.plugin(LlmRuntime).await()
+    const handle = vi.fn((_channel: string, _handler: Handler, _options: { authority: 'loopback' }) =>
+      () => Promise.resolve())
+    const modifyRecord = vi.fn(async (recordKey: CredentialKey, mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>) => {
+      const next = await mutate(records.get(recordKey))
+      if (next === undefined) records.delete(recordKey)
+      else records.set(recordKey, next)
+      return next
+    })
+    ctx.provide('connection', { rpc: { handle } } as never)
+    ctx.provide('credentials', {
+      readRecord: async (recordKey: CredentialKey) => records.get(recordKey),
+      describeRecord: async (recordKey: CredentialKey) => {
+        const record = records.get(recordKey)
+        return record === undefined
+          ? { configured: false, writable: true }
+          : { configured: true, kind: record.kind, writable: true }
+      },
+      modifyRecord,
+      deleteRecord: async (recordKey: CredentialKey) => { records.delete(recordKey) },
+    } as never)
+    const fiber = ctx.plugin({ inject: [...inject], Config, apply }, {})
+    await fiber.await()
+    const handler = handle.mock.calls[0]?.[1]
+    if (handler === undefined) throw new Error('rpc handler missing')
+
+    const status = await handler(
+      OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
+      {},
+      new AbortController().signal,
+    )
+    expect(status).toEqual({ ok: true, value: { configured: true, writable: true } })
+
+    const stored = await handler(
+      OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+      { apiKey: 'new-test-key' },
+      new AbortController().signal,
+    )
+    expect(stored).toEqual({ ok: true, value: { configured: true, writable: true } })
+    expect(modifyRecord).toHaveBeenCalledWith(key, expect.any(Function))
+    expect(records.get(key)).toEqual({ kind: 'api-key', key: 'new-test-key' })
+
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
   it('reads GET /usage through the same loopback channel', async () => {
     type Handler = (
       endpoint: string,
@@ -66,7 +127,9 @@ describe('OpenCode Go rich-discovery RPC', () => {
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
     ctx.provide('credentials', {
-      resolve: async () => ({ value: 'key' }),
+      readRecord: async (recordKey: CredentialKey) => recordKey === credentialKey('llm-opencode-go', 'opencode-go')
+        ? { kind: 'api-key', key: 'key' }
+        : undefined,
     } as never)
     const fiber = ctx.plugin({ inject: [...inject], Config, apply }, {})
     await fiber.await()

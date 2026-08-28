@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { resolveRetryPolicy } from '@deepseek-ai/dsh-llm'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { createOpenCodeGoPiAiProfile } from '../src/pi-ai-profile.ts'
 import type { OpenCodeGoConnectionOptions } from '../src/adapter.ts'
 
 function connection(models: OpenCodeGoConnectionOptions['models']): OpenCodeGoConnectionOptions {
   return {
     baseURL: 'https://opencode.ai/zen/go/v1',
-    apiKeyEnv: credentialRef('OPENCODE_GO_API_KEY'),
     models,
     defaultContextWindow: 262_144,
     maxTokens: undefined,
@@ -29,5 +27,9 @@ describe('OpenCode Go pi-ai profile', () => {
     expect(models.find(model => model.id === 'minimax-m3')?.api).toBe('anthropic-messages')
     expect(profile.provider).toBe('opencode-go')
     expect(profile.baseURL).toBe('https://opencode.ai/zen/go/v1')
+    expect(profile.headers?.['x-opencode-client']).toBe('cli')
+    expect(profile.headers?.['x-opencode-session']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu)
+    expect(profile.headers?.['x-opencode-request']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu)
+    expect(profile.headers?.['x-opencode-session']).not.toBe(profile.headers?.['x-opencode-request'])
   })
 })

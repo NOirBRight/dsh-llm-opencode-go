@@ -48,6 +48,10 @@ dsh web
 
 已配置 key 时，展开卡片会自动刷新订阅用量；没有 key 时用量区保持空闲。Host 读取 `GET &lt;baseURL&gt;/usage`，把 5 小时 / 每周 / 每月窗口渲染成已用百分比。凭据不会传到浏览器。
 
+API Key 只存储在插件自己的凭据记录 `llm-opencode-go/opencode-go` 中，不会读取 DSH 进程环境变量或其他提供方的凭据引用。旧版基于环境变量的值不会迁移；请通过 OpenCode Go 卡片录入、替换或轮换密钥。
+
+聊天请求会附带 OpenCode 官方 Go 客户端使用的元数据（`x-opencode-client` 以及不透明的 session/request UUID）。`User-Agent` 仍由 Harness 统一负责归因。
+
 模型目录默认折叠，展开后一行一个模型：左侧把手可拖动排序（顺序随目录一起保存），右侧箭头展开该行的上下文和能力开关，垃圾桶按钮删除该行。
 
 ### 插件配置
@@ -77,7 +81,6 @@ Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 
 - id: llm-opencode-go
   name: dsh-llm-opencode-go
   config:
-    apiKeyEnv: OPENCODE_API_KEY
     remoteManagement: false
     baseURL: https://opencode.ai/zen/go/v1
     defaultContextWindow: 262144
@@ -116,6 +119,6 @@ Usage 映射成 Harness input/output。pi-ai 按 context capacity clamp maxToken
 ## 已知限制
 
 - Provider 管理默认仅限 loopback。请先配置外部认证和 `dsh web --trusted-host <host>`，再设置 `remoteManagement: true` 并重启 DSH；也可以继续使用 SSH 端口转发。
-- CodexHub 留下的 `~/.dsh/.credentials.yaml.lock`（`codexhub-atomic-lock=1`）会卡住所有 DSH `credentials.set`，需删掉该 sidecar。见 CodexHub `docs/tasks/dsh-credentials-lock-interop.md`。
+- CodexHub 留下的 `~/.dsh/.credentials.yaml.lock`（`codexhub-atomic-lock=1`）会卡住 DSH 凭据写入，需删掉该 sidecar。见 CodexHub `docs/tasks/dsh-credentials-lock-interop.md`。
 - 本包不为 `opencode-go` 调用 `registerConfigurableProviders`（与 llm-pi-ai 目录冲突）。
 - 共享 PiAiAdapter 不支持 GenerateOptions.stop。

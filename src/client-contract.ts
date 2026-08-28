@@ -6,8 +6,6 @@ import { isJsonRecord } from './json-record.ts'
 export const OPENCODE_GO_SETTINGS_NAMESPACE = 'llm-opencode-go'
 /** Provider route owned by the OpenCode Go plugin. */
 export const OPENCODE_GO_PROVIDER = 'opencode-go'
-/** Credential reference used when the settings section names none. */
-export const DEFAULT_API_KEY_ENV = 'OPENCODE_API_KEY'
 /** Public OpenCode Go API base URL. */
 export const OPENCODE_GO_PUBLIC_BASE_URL = 'https://opencode.ai/zen/go/v1'
 /** Default context capacity for models without documented or discovered metadata. */
@@ -58,8 +56,6 @@ export interface OpenCodeGoCatalogModelConfig {
 
 /** Settings fields presented by the package's Web configuration card. */
 export interface OpenCodeGoSettingsView {
-  /** Credential reference resolved by the Host. */
-  apiKeyEnv: string
   /** Go API base URL ending in /zen/go/v1. */
   baseURL: string
   /** Advisory model catalog. */
@@ -189,13 +185,11 @@ export function decodeOpenCodeGoCatalogModel(value: unknown): OpenCodeGoCatalogM
 /** Narrow the redacted, schema-resolved settings section before it enters React state. */
 export function decodeOpenCodeGoSettings(value: unknown): OpenCodeGoSettingsView | undefined {
   if (!isJsonRecord(value)) return undefined
-  const apiKeyEnv = value.apiKeyEnv
   const baseURL = value.baseURL
   const models = value.models
   const maxTokens = value.maxTokens
   const defaultContextWindow = value.defaultContextWindow
   const streamIdleTimeoutMs = value.streamIdleTimeoutMs
-  if (typeof apiKeyEnv !== 'string' || apiKeyEnv.length === 0) return undefined
   if (typeof baseURL !== 'string' || baseURL.length === 0) return undefined
   if (!Array.isArray(models)) return undefined
   if (!optionalPositiveInteger(maxTokens)) return undefined
@@ -210,7 +204,6 @@ export function decodeOpenCodeGoSettings(value: unknown): OpenCodeGoSettingsView
     decodedModels.push(decoded)
   }
   return {
-    apiKeyEnv,
     baseURL,
     models: decodedModels,
     ...(maxTokens === undefined ? {} : { maxTokens }),

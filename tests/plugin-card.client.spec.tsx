@@ -11,7 +11,6 @@ import type { OpenCodeGoCatalogModelConfig, OpenCodeGoSettingsView } from '../sr
 afterEach(() => { cleanup() })
 
 const settings: OpenCodeGoSettingsView = {
-  apiKeyEnv: 'OPENCODE_GO_API_KEY',
   baseURL: 'https://opencode.ai/zen/go/v1',
   models: [],
   defaultContextWindow: 4096,

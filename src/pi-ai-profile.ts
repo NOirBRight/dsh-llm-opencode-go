@@ -3,6 +3,7 @@
  * One route, three wire protocols: model.api selects Completions, Responses, or Messages.
  */
 
+import { randomUUID } from 'node:crypto'
 import { createProvider } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
 import { openAIResponsesApi } from '@earendil-works/pi-ai/api/openai-responses.lazy'
@@ -19,6 +20,19 @@ const DEFAULT_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
 const NO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 
 type GoApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages'
+
+/**
+ * Add the client metadata used by OpenCode's own requests to the Go gateway.
+ * DSH has no OpenCode project or user identity, so each resolved profile gets
+ * opaque UUIDs for the gateway's session and request fields.
+ */
+function openCodeGoIdentityHeaders(): Record<string, string> {
+  return {
+    'x-opencode-client': 'cli',
+    'x-opencode-session': randomUUID(),
+    'x-opencode-request': randomUUID(),
+  }
+}
 
 function toPiAiModel(
   model: OpenCodeGoCatalogModel,
@@ -110,8 +124,8 @@ export function createOpenCodeGoPiAiProfile(
   return {
     provider: OPENCODE_GO_PROVIDER,
     displayName: 'OpenCode Go',
-    apiKeyEnv: connection.apiKeyEnv,
     baseURL,
+    headers: openCodeGoIdentityHeaders(),
     defaultContextWindow: connection.defaultContextWindow,
     defaultMaxTokens: OPENCODE_GO_DEFAULT_MODEL_MAX_TOKENS,
     defaultInput: ['text'],
