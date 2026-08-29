@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /** Verify the built adapter provides the method called directly by an alpha1 Host. */
-const module = await import(new URL('../lib/index.js', import.meta.url).href)
-const Adapter = module.OpenCodeGoAdapter
+const adapterModule = await import(new URL('../lib/index.js', import.meta.url).href)
+const Adapter = adapterModule.OpenCodeGoAdapter
 if (typeof Adapter !== 'function') throw new Error('OpenCodeGoAdapter is not exported from lib/index.js')
 if (!Object.hasOwn(Adapter.prototype, 'imageRequestPricing')) {
   throw new Error('OpenCodeGoAdapter must own imageRequestPricing')

@@ -37,15 +37,7 @@ describe('OpenCodeGoAdapter image pricing', () => {
   it('declares neutral imageRequestPricing for alpha hosts', () => {
     expect(Object.hasOwn(OpenCodeGoAdapter.prototype, 'imageRequestPricing')).toBe(true)
     const adapter = new OpenCodeGoAdapter({
-      options: () => ({
-        baseURL: 'https://opencode.ai/zen/go/v1',
-        apiKeyEnv: credentialRef('OPENCODE_GO_API_KEY'),
-        models: [{ id: 'glm-5.3', contextWindow: 1_000_000 }],
-        defaultContextWindow: 262_144,
-        maxTokens: undefined,
-        streamIdleTimeoutMs: 300_000,
-        retryPolicy: resolveRetryPolicy(undefined, 'test'),
-      }),
+      options: () => connection([{ id: 'glm-5.3', contextWindow: 1_000_000 }]),
       resolveApiKey: async () => 'test-key',
     })
     expect(adapter.imageRequestPricing('opencode-go', 'glm-5.3')).toBeUndefined()
