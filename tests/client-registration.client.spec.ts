@@ -2,7 +2,7 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import { describe, expect, it, vi } from 'vitest'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SettingsScope, SettingsScopeSnapshot } from '../src/client/shim.ts'
 import type { OpenCodeGoSettingsView } from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
 

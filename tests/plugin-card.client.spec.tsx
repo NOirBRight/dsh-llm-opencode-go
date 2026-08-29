@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SettingsScopeSnapshot } from '../src/client/shim.ts'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
