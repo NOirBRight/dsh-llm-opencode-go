@@ -19,8 +19,8 @@ import { BrandMark } from './BrandMark.tsx'
 import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
-import type {} from './provider-section.ts'
-import { SortableList } from './SortableList.tsx'
+import type {} from 'dsh-llm-providers-ui/client'
+import { SortableList } from 'dsh-llm-providers-ui/client'
 
 /** Credential state exposed without returning the credential value. */
 export interface OpenCodeGoCredentialState {

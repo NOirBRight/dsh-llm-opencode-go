@@ -19,11 +19,12 @@ import {
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
+  OPENCODE_GO_PROVIDER,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
 import type { OpenCodeGoDiscoveryRequest, OpenCodeGoSettingsView } from '../client-contract.ts'
-import { ensureProviderSection } from './provider-section.ts'
+import { ensureProviderSection } from 'dsh-llm-providers-ui/client'
 import { OpenCodeGoPluginCard } from './OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardFace } from './OpenCodeGoPluginCard.tsx'
 import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCodeGoModelPicker.tsx'
@@ -160,6 +161,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.provider.item', () => ctx.slots.register({
     name: 'settings.provider.item',
     key: OPENCODE_GO_SETTINGS_NAMESPACE,
+    provider: OPENCODE_GO_PROVIDER,
     locale: localeNamespace,
     inject: (): OpenCodeGoPluginCardFace => ({
       t,
