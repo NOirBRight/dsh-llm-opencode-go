@@ -1,6 +1,6 @@
 /** Browser half: OpenCode Go setup inside Plugin configuration. */
 
-import type { ClientContext, SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext, SettingsScope, SettingsScopeSnapshot } from './shim.js'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -41,7 +41,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Stable browser-plugin name. */
 export const name = 'dsh-llm-opencode-go-client'
 /** Client services required by the Plugin configuration contribution. */
-export const inject = ['slots', 'locale', 'connection', 'remote']
+export const inject = ['slots', 'locale', 'connection']
 
 /** Register localized OpenCode Go configuration under Plugin configuration. */
 export function apply(ctx: ClientContext): void {

@@ -12,7 +12,24 @@ import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
 import { OPENCODE_GO_PROVIDER } from './client-contract.ts'
 import type { OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adapter.ts'
 import { protocolForModel } from './catalog.ts'
-import { openCodeGoThinkingLevelMap } from './reasoning.ts'
+import { openCodeGoThinkingLevelMap, openCodeGoSupportedEfforts } from './reasoning.ts'
+import type { ModelThinkingLevel } from '@earendil-works/pi-ai'
+import type { PiAiReasoningEfforts } from '@deepseek-ai/dsh-llm-pi-ai'
+
+/** Wire declaration of this model's selectable thinking levels: what pi-ai
+ *  turns into per-model reasoning.efforts metadata for selectors. */
+function reasoningEfforts(model: OpenCodeGoCatalogModel): PiAiReasoningEfforts | undefined {
+  const levels = openCodeGoSupportedEfforts(model)
+  if (levels.length === 0) return undefined
+  const map: Partial<Record<ModelThinkingLevel, string | null>> = {}
+  for (const level of levels) {
+    if (level === 'off') { map.off = null; continue }
+    const wire = openCodeGoThinkingLevelMap(model)
+    const value = wire?.[level]
+    map[level] = typeof value === 'string' && value.length > 0 ? value : level
+  }
+  return map as PiAiReasoningEfforts
+}
 
 export const OPENCODE_GO_DEFAULT_MODEL_MAX_TOKENS = 32_768
 const DEFAULT_MAX_REQUEST_IMAGE_BYTES = 20 * 1024 * 1024
@@ -27,6 +44,7 @@ function toPiAiModel(
 ): Model<GoApi> {
   const api = model.api ?? protocolForModel(model.id)
   const levels = openCodeGoThinkingLevelMap(model)
+  const efforts = reasoningEfforts(model)
   const shared = {
     id: model.id,
     name: model.name ?? model.id,
@@ -34,6 +52,7 @@ function toPiAiModel(
     baseUrl,
     reasoning: model.thinking === true,
     ...(levels === undefined ? {} : { thinkingLevelMap: levels }),
+    ...efforts === undefined ? {} : { reasoningEfforts: efforts },
     input: (model.vision === true ? ['text', 'image'] : ['text']) as 'text'[] | ['text', 'image'],
     cost: NO_COST,
     contextWindow: model.contextWindow ?? connection.defaultContextWindow,
