@@ -40,6 +40,13 @@ export declare const DEFAULT_CONTEXT_WINDOW = 262144;
 export declare function httpErrorCode(status: number, error?: WireError): string;
 /** Classify documented transient OpenCode Go failures that can arrive without an HTTP status. */
 export declare function classifyOpenCodeGoTransientError(chunk: StreamChunk): StreamChunk;
+/**
+ * Remove sandbox escalation choices that cannot be strictly wider than the
+ * current DSH policy. Core still validates every retained request; this only
+ * prevents the model from selecting an impossible optional enum value.
+ * Scans both options.system and options.messages context-injection text.
+ */
+export declare function narrowOpenCodeGoEscalationSchemas(options: GenerateOptions): GenerateOptions;
 /** The OpenCode Go chat adapter backed by a mixed-API pi-ai profile. */
 export declare class OpenCodeGoAdapter extends LlmAdapter {
     private readonly config;

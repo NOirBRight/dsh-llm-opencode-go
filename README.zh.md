@@ -11,7 +11,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 要求 DeepSeek Harness 0.1.0-rc.6 或更高版本。直接从 GitHub 安装：
 
 ~~~sh
-dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.8
+dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.14
 dsh web
 ~~~
 

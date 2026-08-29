@@ -11,7 +11,7 @@ The package root exposes the Cordis plugin contract and OpenCodeGoAdapter. The s
 DeepSeek Harness 0.1.0-rc.6 or later is required. Install directly from GitHub:
 
 ~~~sh
-dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.8
+dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.14
 dsh web
 ~~~
 
