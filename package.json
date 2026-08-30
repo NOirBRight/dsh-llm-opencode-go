@@ -1,7 +1,7 @@
 {
   "name": "dsh-llm-opencode-go",
   "description": "OpenCode Go models, mixed Completions/Responses/Messages chat, and subscription usage for DeepSeek Harness",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -45,7 +45,7 @@
   "license": "MIT",
   "dependencies": {
     "@earendil-works/pi-ai": "^0.82.1",
-    "dsh-llm-providers-ui": "link:../dsh-llm-providers-ui"
+    "dsh-llm-providers-ui": "github:NOirBRight/dsh-llm-providers-ui#v0.1.0"
   },
   "dsh": {
     "bundle": {

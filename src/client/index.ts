@@ -19,7 +19,6 @@ import {
   OPENCODE_GO_RPC_CHANNEL,
   OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
-  OPENCODE_GO_PROVIDER,
   OPENCODE_GO_SETTINGS_NAMESPACE,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
@@ -32,6 +31,12 @@ import type { OpenCodeGoModelPickerFace } from './OpenCodeGoModelPicker.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    'settings.provider.item': { kind: 'keyed'; scope: 'root' }
+  }
+}
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** OpenCode Go Plugin configuration copy. */
@@ -161,7 +166,6 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.provider.item', () => ctx.slots.register({
     name: 'settings.provider.item',
     key: OPENCODE_GO_SETTINGS_NAMESPACE,
-    provider: OPENCODE_GO_PROVIDER,
     locale: localeNamespace,
     inject: (): OpenCodeGoPluginCardFace => ({
       t,
