@@ -57,6 +57,7 @@ export async function discoverModels(
   request: LlmModelDiscoveryRequest,
   storedApiKey?: () => Promise<string | undefined>,
   fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<readonly OpenCodeGoDiscoveredModel[]> {
   const baseURL = (request.baseURL ?? PUBLIC_BASE_URL).replace(/\/+$/u, '')
   const supplied = request.apiKey ?? await storedApiKey?.()
@@ -68,7 +69,7 @@ export async function discoverModels(
     )
   const url = listingURL(baseURL)
   const timeout = AbortSignal.timeout(DISCOVERY_TIMEOUT_MS)
-  const signal = request.signal === undefined ? timeout : AbortSignal.any([request.signal, timeout])
+  const requestSignal = signal === undefined ? timeout : AbortSignal.any([signal, timeout])
   let response: Response
   try {
     response = await fetchImpl(url, {
@@ -79,10 +80,10 @@ export async function discoverModels(
         ...attributionHeaders(),
       },
       redirect: 'error',
-      signal,
+      signal: requestSignal,
     })
   } catch (error: unknown) {
-    if (request.signal?.aborted) throw new LlmError('OpenCode Go model discovery aborted', 'ABORTED', { cause: error })
+    if (signal?.aborted) throw new LlmError('OpenCode Go model discovery aborted', 'ABORTED', { cause: error })
     throw new LlmError('Could not reach OpenCode Go model catalog', 'DISCOVERY_FAILED', { cause: error })
   }
   if (!response.ok) {
@@ -95,9 +96,10 @@ export async function discoverModels(
   }
   let body: unknown
   try {
-    body = JSON.parse(await readBoundedText(response, MAX_DISCOVERY_BYTES, url, 'DISCOVERY_FAILED', signal))
+    body = JSON.parse(await readBoundedText(response, MAX_DISCOVERY_BYTES, url, 'DISCOVERY_FAILED', requestSignal))
   } catch (error: unknown) {
     if (error instanceof LlmError) throw error
+    if (signal?.aborted) throw new LlmError('OpenCode Go model discovery aborted', 'ABORTED', { cause: error })
     throw new LlmError('OpenCode Go model catalog did not return JSON', 'DISCOVERY_FAILED', { cause: error })
   }
   return parseOpenCodeGoModels(body)

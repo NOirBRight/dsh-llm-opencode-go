@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { discoverModels, parseOpenCodeGoModels } from '../src/discovery.ts'
 import { protocolForModel } from '../src/catalog.ts'
+
+afterEach(() => { vi.restoreAllMocks() })
 
 describe('OpenCode Go model discovery', () => {
   it('enriches listing ids with documented protocol and context', () => {
@@ -37,5 +39,28 @@ describe('OpenCode Go model discovery', () => {
     })
     const result = await discoverModels({ baseURL: 'https://example.test/zen/go/v1/' }, undefined, fetchImpl)
     expect(result[0]).toMatchObject({ id: 'kimi-k3', api: 'openai-completions', vision: true })
+  })
+
+  it('aborts a response-body read when the caller signal aborts', async () => {
+    const controller = new AbortController()
+    const fetchImpl = vi.fn(async () => new Response(new ReadableStream({
+      start(stream) { stream.enqueue(new TextEncoder().encode('{')) },
+    }), { status: 200 }))
+    const pending = discoverModels({ baseURL: 'https://example.test/zen/go/v1' }, undefined, fetchImpl, controller.signal)
+    await Promise.resolve()
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ code: 'ABORTED' })
+  })
+
+  it('maps the response-body timeout to a discovery failure', async () => {
+    const timeout = new AbortController()
+    vi.spyOn(AbortSignal, 'timeout').mockReturnValue(timeout.signal)
+    const fetchImpl = vi.fn(async () => new Response(new ReadableStream({
+      start(stream) { stream.enqueue(new TextEncoder().encode('{')) },
+    }), { status: 200 }))
+    const pending = discoverModels({ baseURL: 'https://example.test/zen/go/v1' }, undefined, fetchImpl)
+    await Promise.resolve()
+    timeout.abort()
+    await expect(pending).rejects.toMatchObject({ code: 'DISCOVERY_FAILED' })
   })
 })

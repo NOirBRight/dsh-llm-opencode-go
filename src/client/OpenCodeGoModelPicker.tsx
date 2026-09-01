@@ -227,7 +227,7 @@ const outlineButtonStyle: CSSProperties = {
 /** Render the OpenCode Go model candidate picker in the frame overlay layer. */
 export function OpenCodeGoModelPicker(props: OpenCodeGoModelPickerProps): ReactNode {
   const { t } = props
-  const snapshot = props.useOpenCodeGoModelPicker(value => value)
+  const snapshot = props.useOpenCodeGoModelPicker((value: OpenCodeGoModelPickerSnapshot) => value)
   useEffect(() => {
     if (!snapshot.open) return
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -259,7 +259,7 @@ export function OpenCodeGoModelPicker(props: OpenCodeGoModelPickerProps): ReactN
             ? <p style={errorStyle} role="alert">{snapshot.error}</p>
             : (
               <ul style={listStyle}>
-                {snapshot.candidates.map(model => (
+                {snapshot.candidates.map((model: OpenCodeGoCatalogModelConfig) => (
                   <li key={model.id}>
                     <label style={candidateStyle}>
                       <input

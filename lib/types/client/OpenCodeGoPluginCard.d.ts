@@ -1,6 +1,6 @@
 /** OpenCode Go connection and model-catalog card for Plugin configuration. */
 import type { ReactNode } from 'react';
-import type { SettingsScope } from './shim.js';
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { OpenCodeGoCatalogModelConfig, OpenCodeGoDiscoveryRequest, OpenCodeGoSaveResult, OpenCodeGoSettingsView, OpenCodeGoUsageView } from '../client-contract.ts';
 import type { OpenCodeGoSettingsKey } from './locales.ts';

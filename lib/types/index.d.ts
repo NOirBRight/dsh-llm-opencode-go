@@ -27,7 +27,6 @@ export interface Config {
     defaultContextWindow?: number;
     streamIdleTimeoutMs?: number;
     retryPolicy?: RetryPolicyConfig;
-    remoteManagement?: boolean;
 }
 export declare const Config: z<Config>;
 export type ResolvedOpenCodeGoOptions = OpenCodeGoConnectionOptions;

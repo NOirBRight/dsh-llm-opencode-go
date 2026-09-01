@@ -4,7 +4,7 @@
  * Messages are selected per model. Discovery and usage stay native Host calls.
  */
 import { LlmAdapter } from '@deepseek-ai/dsh-llm';
-import type { GenerateOptions, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';
+import type { GenerateOptions, LlmImageRequestPricing, LlmModelInfo, PreparedAdapterCall, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';
 import type { CredentialRef } from '@deepseek-ai/dsh-credentials';
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment';
 import { discoverModels } from './discovery.ts';
@@ -57,20 +57,16 @@ export declare class OpenCodeGoAdapter extends LlmAdapter {
     providerInfo(provider: string): LlmProviderInfo;
     providerRetryPolicy(provider: string): ResolvedRetryPolicy | undefined;
     /**
-     * Declare neutral request-image pricing when a newer Host calls an adapter built against an older peer instance.
-     * The method omits `override` so the same source compiles against pre-alpha peer types.
+     * OpenCode Go does not publish provider-owned image-request pricing.
      * @param _provider - provider route.
-     * @param _model - model id.
-     * @returns `undefined` so the Host uses heuristic image pricing.
+     * @param _model - exact model id.
+     * @returns undefined so the Host uses its neutral image estimate.
      */
-    imageRequestPricing(_provider: string, _model: string): undefined;
+    imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;
     listModels(provider: string): Promise<readonly LlmModelInfo[]>;
     resolveModel(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;
     stream(options: GenerateOptions): AsyncIterable<StreamChunk>;
-    prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<{
-        model: LlmResolvedModelInfo;
-        stream: (options: GenerateOptions) => AsyncGenerator<StreamChunk, void, unknown>;
-    }>;
+    prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;
 }
 export { discoverModels };
 //# sourceMappingURL=adapter.d.ts.map

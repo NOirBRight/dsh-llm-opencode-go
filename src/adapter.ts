@@ -7,7 +7,9 @@
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type {
   GenerateOptions,
+  LlmImageRequestPricing,
   LlmModelInfo,
+  PreparedAdapterCall,
   LlmProviderInfo,
   LlmResolvedModelInfo,
   ResolvedRetryPolicy,
@@ -202,13 +204,12 @@ export class OpenCodeGoAdapter extends LlmAdapter {
   }
 
   /**
-   * Declare neutral request-image pricing when a newer Host calls an adapter built against an older peer instance.
-   * The method omits `override` so the same source compiles against pre-alpha peer types.
+   * OpenCode Go does not publish provider-owned image-request pricing.
    * @param _provider - provider route.
-   * @param _model - model id.
-   * @returns `undefined` so the Host uses heuristic image pricing.
+   * @param _model - exact model id.
+   * @returns undefined so the Host uses its neutral image estimate.
    */
-  imageRequestPricing(_provider: string, _model: string): undefined {
+  override imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined {
     return undefined
   }
 
@@ -228,23 +229,14 @@ export class OpenCodeGoAdapter extends LlmAdapter {
     }
   }
 
-  override async prepareCall(provider: string, model: string, signal?: AbortSignal) {
+  override async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
     const delegate = this.current()
-    const inner = typeof (delegate as { prepareCall?: unknown }).prepareCall === 'function'
-      ? await (delegate as unknown as {
-        prepareCall: (provider: string, model: string, signal?: AbortSignal) => Promise<{
-          model: LlmResolvedModelInfo
-          stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>
-        }>
-      }).prepareCall(provider, model, signal)
-      : {
-        model: await this.resolveModel(provider, model, signal),
-        stream: (options: GenerateOptions) => delegate.stream(options),
-      }
+    const inner = await delegate.prepareCall(provider, model, signal)
+    const catalog = this.config.options().models.find(entry => entry.id === model)
     return {
-      model: inner.model,
+      model: applyOpenCodeGoReasoningMetadata(inner.model, model, catalog?.defaultEffort),
       stream: async function* (options: GenerateOptions) {
-        for await (const chunk of inner.stream(narrowOpenCodeGoEscalationSchemas(options)) as AsyncIterable<StreamChunk>) {
+        for await (const chunk of inner.stream(narrowOpenCodeGoEscalationSchemas(options))) {
           yield classifyOpenCodeGoTransientError(chunk)
         }
       },

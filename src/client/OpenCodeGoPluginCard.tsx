@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import type { SettingsScope } from './shim.js'
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {
@@ -19,8 +19,7 @@ import { BrandMark } from './BrandMark.tsx'
 import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
-import type {} from 'dsh-llm-providers-ui/client'
-import { SortableList } from 'dsh-llm-providers-ui/client'
+import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
 export interface OpenCodeGoCredentialState {
@@ -375,7 +374,7 @@ function UsageBar({ label, usedText, window: quota, t, fallbackReset }: {
 /** Render the single-package OpenCode Go contribution under Plugin configuration. */
 export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNode {
   const { t } = props
-  const snapshot = props.useOpenCodeGoSettings(value => value)
+  const snapshot = props.useOpenCodeGoSettings((value: OpenCodeGoSettingsView) => value)
   const [open, setOpen] = useState(false)
   const initial = useMemo(() => snapshot.value === undefined ? undefined : draftOf(snapshot.value), [snapshot.value])
   const [source, setSource] = useState<Draft | undefined>(initial)
