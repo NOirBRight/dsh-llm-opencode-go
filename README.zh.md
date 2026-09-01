@@ -8,41 +8,22 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ## 安装
 
-要求 DeepSeek Harness 0.1.0-rc.6 或更高版本。直接从 GitHub 安装：
+要求 DeepSeek Harness 0.1.2-alpha.1 或更高版本。通过 profile manager 安装已发布的软件包：
 
 ~~~sh
-dsh plugin --profile web add github:NOirBRight/dsh-llm-opencode-go#v0.1.8
+dsh plugin --profile web add --force https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go.tgz
 dsh web
 ~~~
 
-仓库跟踪可直接发布的 lib artifacts，因此 GitHub 安装不需要 build-script allowlist。源码 checkout 可在 `pnpm run build` 后用 link 安装。
+软件包包含可直接使用的 `lib` artifacts。请在 profile 中与本插件一起安装 `dsh-llm-providers-ui`，由它提供共享的 LLM Providers 页面。
 
-## 远程管理
+alpha.1 Host Connection RPC 会通过 Web trust fence 认证浏览器请求。持久化设置只对 loopback 页面开放；即使 authority 已获信任，非 loopback 页面也只在进程内保存设置。需要远程编辑时请使用 SSH 转发。
 
-默认插件设置 RPC 仅允许 loopback。通过非回环地址打开 DSH（如 https://dsh.noirbright.top 或 http://192.168.50.75:3080）时会显示“远程浏览器无法编辑插件设置”。
-
-如需在可信主机上远程编辑：
-
-1. 在 profile patch（生产 `~/.dsh/profiles/web/cordis.patch.yml`，lab `~/.dsh-lab/profiles/web/cordis.patch.yml`）中加入：
-   ```yaml
-   - id: llm-opencode-go
-     config:
-       remoteManagement: true
-   ```
-2. 以可信主机重启 DSH：
-   ```sh
-   dsh web --trusted-host 192.168.50.75 --trusted-host dsh.noirbright.top
-   ```
-   当前生产已使用 `--trusted-host 192.168.50.75 --trusted-host dsh.noirbright.top`，新增主机需一并加入。
-3. 刷新浏览器。主机上保存的设置对远程会话依然有效。
-
-未启用 `remoteManagement: true` 时，请使用 `ssh -L 3080:127.0.0.1:3080 user@host` 后打开 `http://127.0.0.1:3080`。
-
-把本插件放在 profile bundle 里其它 LLM provider **之前**，由它认领 LLM Providers 页并列出所有已装卡片。
+请在 profile 中与 `dsh-llm-providers-ui` 一起安装本插件，由 owner 枚举所有已安装的 provider 卡片。
 
 ## Web 配置
 
-打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。默认仅 loopback。外部认证部署请设置 `remoteManagement: true`，并用 `dsh web --trusted-host <host>` 启动（或使用 SSH 转发）；修改后必须重启 `dsh web`。
+打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。alpha.1 Connection RPC 通过 Web trust fence 认证请求，但持久化设置写入需要 loopback settings scope；浏览器在远程主机时请使用 SSH 转发。
 
 卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用文档目录补全 context window、vision、thinking 以及 Completions / Responses / Messages。
 
@@ -78,7 +59,6 @@ Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 
   name: dsh-llm-opencode-go
   config:
     apiKeyEnv: OPENCODE_API_KEY
-    remoteManagement: false
     baseURL: https://opencode.ai/zen/go/v1
     defaultContextWindow: 262144
     streamIdleTimeoutMs: 300000
@@ -115,7 +95,64 @@ Usage 映射成 Harness input/output。pi-ai 按 context capacity clamp maxToken
 
 ## 已知限制
 
-- Provider 管理默认仅限 loopback。请先配置外部认证和 `dsh web --trusted-host <host>`，再设置 `remoteManagement: true` 并重启 DSH；也可以继续使用 SSH 端口转发。
 - CodexHub 留下的 `~/.dsh/.credentials.yaml.lock`（`codexhub-atomic-lock=1`）会卡住所有 DSH `credentials.set`，需删掉该 sidecar。见 CodexHub `docs/tasks/dsh-credentials-lock-interop.md`。
 - 本包不为 `opencode-go` 调用 `registerConfigurableProviders`（与 llm-pi-ai 目录冲突）。
 - 共享 PiAiAdapter 不支持 GenerateOptions.stop。
+## LLM Providers UI ownership
+
+**LLM 供应商**设置页（`settings.section` `id: providers` 及子槽 `settings.provider.item`）与共享的 `llm-providers` 排序存储完全由 `dsh-llm-providers-ui` 拥有。
+
+- 本插件仅贡献自己的卡片（`key: llm-opencode-go`）和 Host 上的 `llm` 路由；不安装页面或共享命名空间。加载顺序不影响归属。
+- 未安装 owner 时（Headless 或 Web 未装 `dsh-llm-providers-ui`）：Host 侧模型路由 `opencode-go` 仍可工作；Web 侧 Providers 页面与本卡片不显示，并在浏览器控制台提示缺少 owner。正式 Web 发版的组合测试会拒绝缺少 owner 的图。
+- 导航地球图标为 ``alpha.1`` 临时 DOM 适配器，仅由 `dsh-llm-providers-ui` 持有；本插件不含该适配。
+
+请在 profile 中与 provider 插件一起显式安装 `dsh-llm-providers-ui`（见其 `cordis.patch.yml`）。
+
+
+## 正式版安装（Latest）
+
+OpenCode Go models with per-model protocol routing, discovery, and usage. 正式成品只支持 DeepSeek Harness 0.1.2-alpha.1；发布包只包含构建后的 Host/Client 产物，不包含兄弟仓库源码、本机路径或 link:/workspace: 依赖。
+
+LLM Providers 页面、导航和共享排序由 dsh-llm-providers-ui 独占；本插件只提供卡片、模型和 Host 路由。Web 必须先装 Owner，headless 只使用 Host 路由时可以不装 Owner。
+
+Owner（Latest）：
+
+~~~sh
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui.tgz
+~~~
+
+本 Provider（Latest）：
+
+~~~sh
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go.tgz
+~~~
+
+固定版本（可复现）：
+
+~~~sh
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.2/dsh-llm-providers-ui.tgz
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.16/dsh-llm-opencode-go.tgz
+~~~
+
+更新、卸载与验证：
+
+~~~sh
+# 更新到最新 Release
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go.tgz
+# 验证加载与版本
+dsh plugin --profile web list
+dsh plugin --profile web doctor
+# 只卸载本插件
+dsh plugin --profile web remove dsh-llm-opencode-go
+~~~
+
+配置入口：Web 使用「设置」中的本插件页面；Host-only 插件使用 profile 的 dsh.profile.bundles 配置。先复制本 README 的最小 YAML/JSON 示例，再填写凭据或后端地址。
+
+回滚：重新执行固定版本 v0.1.16 命令，确认插件列表后只重启一次 Web 服务。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
+
+Release 与完整性：[v0.1.16](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.16) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.16/SHA256SUMS)。

@@ -12,5 +12,5 @@ export type OpenCodeGoDiscoveredModel = OpenCodeGoCatalogModelConfig;
 /** Parse the OpenAI-shaped listing and attach documented metadata. */
 export declare function parseOpenCodeGoModels(value: unknown): OpenCodeGoDiscoveredModel[];
 /** Fetch the current public model catalog. */
-export declare function discoverModels(request: LlmModelDiscoveryRequest, storedApiKey?: () => Promise<string | undefined>, fetchImpl?: typeof fetch): Promise<readonly OpenCodeGoDiscoveredModel[]>;
+export declare function discoverModels(request: LlmModelDiscoveryRequest, storedApiKey?: () => Promise<string | undefined>, fetchImpl?: typeof fetch, signal?: AbortSignal): Promise<readonly OpenCodeGoDiscoveredModel[]>;
 //# sourceMappingURL=discovery.d.ts.map

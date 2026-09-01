@@ -57,7 +57,7 @@ const client: UserConfig = {
   clean: false,
   deps: {
     neverBundle: [...CLIENT_EXTERNALS],
-    alwaysBundle: (id: string) => !isClientExternal(id),
+    alwaysBundle: ['dsh-llm-providers-ui/sortable'],
   },
   plugins: [{
     name: 'dsh-client-bundle-purity',

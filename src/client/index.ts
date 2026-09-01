@@ -1,11 +1,13 @@
 /** Browser half: OpenCode Go setup inside Plugin configuration. */
 
-import type { ClientContext, SettingsScope, SettingsScopeSnapshot } from './shim.js'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import {
@@ -23,7 +25,6 @@ import {
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
 import type { OpenCodeGoDiscoveryRequest, OpenCodeGoSettingsView } from '../client-contract.ts'
-import { ensureProviderSection } from './provider-section.ts'
 import { OpenCodeGoPluginCard } from './OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardFace } from './OpenCodeGoPluginCard.tsx'
 import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCodeGoModelPicker.tsx'
@@ -31,6 +32,12 @@ import type { OpenCodeGoModelPickerFace } from './OpenCodeGoModelPicker.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    'settings.provider.item': { kind: 'keyed'; scope: 'root' }
+  }
+}
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** OpenCode Go Plugin configuration copy. */
@@ -56,14 +63,14 @@ export function apply(ctx: ClientContext): void {
   const scope: SettingsScope<OpenCodeGoSettingsView> = {
     getSnapshot: () => snapshot,
     subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener) } },
-    set: async () => undefined,
-    unset: async () => undefined,
+    mutate: async () => { throw new Error('settings are managed by the provider RPC') },
+    set: async () => { throw new Error('settings are managed by the provider RPC') },
+    unset: async () => { throw new Error('settings are managed by the provider RPC') },
   }
   const updateSnapshot = (next: SettingsScopeSnapshot<OpenCodeGoSettingsView>): void => { snapshot = next; listeners.forEach(listener => { listener() }) }
   const picker = new OpenCodeGoModelPickerController()
-  // This dual-runtime package compiles Host and Client Context augmentations in
-  // one project; the browser entry receives the client handle at runtime.
-  const { rpc } = ctx.get('connection') as unknown as ConnectionHandle
+  const connection: ConnectionHandle = ctx.reflect.get('connection')
+  const { rpc } = connection
 
   const readManagement = async (): Promise<void> => {
     const result = await callPlugin(OPENCODE_GO_SETTINGS_READ_ENDPOINT, {})
@@ -155,8 +162,6 @@ export function apply(ctx: ClientContext): void {
       adoptPickerModels: picker.adopt,
     }),
   }, OpenCodeGoModelPicker))
-
-  ensureProviderSection(ctx)
   ctx.slots.inject('settings.provider.item', () => ctx.slots.register({
     name: 'settings.provider.item',
     key: OPENCODE_GO_SETTINGS_NAMESPACE,
@@ -175,4 +180,19 @@ export function apply(ctx: ClientContext): void {
       closeModelPicker: picker.close,
     }),
   }, OpenCodeGoPluginCard))
+  ctx.effect(() => {
+    let warned = false
+    const check = (): void => {
+      if (ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers') || warned) return
+      warned = true
+      console.warn('[dsh-llm-providers-ui] LLM Providers page missing for card llm-opencode-go: install dsh-llm-providers-ui to show the card. Host route remains active.')
+    }
+    const timer = setTimeout(check, 0)
+    const stop = ctx.slots.subscribe('settings.section', check)
+    return () => {
+      clearTimeout(timer)
+      stop()
+    }
+  }, 'dsh-llm-providers-ui: missing owner diagnostic')
+
 }

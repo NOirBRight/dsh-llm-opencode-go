@@ -4,7 +4,7 @@
  * Messages are selected per model. Discovery and usage stay native Host calls.
  */
 import { LlmAdapter } from '@deepseek-ai/dsh-llm';
-import type { GenerateOptions, LlmModelInfo, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';
+import type { GenerateOptions, LlmImageRequestPricing, LlmModelInfo, PreparedAdapterCall, LlmProviderInfo, LlmResolvedModelInfo, ResolvedRetryPolicy, StreamChunk } from '@deepseek-ai/dsh-llm';
 import type { CredentialRef } from '@deepseek-ai/dsh-credentials';
 import type { AttachmentStore } from '@deepseek-ai/dsh-attachment';
 import { discoverModels } from './discovery.ts';
@@ -40,6 +40,13 @@ export declare const DEFAULT_CONTEXT_WINDOW = 262144;
 export declare function httpErrorCode(status: number, error?: WireError): string;
 /** Classify documented transient OpenCode Go failures that can arrive without an HTTP status. */
 export declare function classifyOpenCodeGoTransientError(chunk: StreamChunk): StreamChunk;
+/**
+ * Remove sandbox escalation choices that cannot be strictly wider than the
+ * current DSH policy. Core still validates every retained request; this only
+ * prevents the model from selecting an impossible optional enum value.
+ * Scans both options.system and options.messages context-injection text.
+ */
+export declare function narrowOpenCodeGoEscalationSchemas(options: GenerateOptions): GenerateOptions;
 /** The OpenCode Go chat adapter backed by a mixed-API pi-ai profile. */
 export declare class OpenCodeGoAdapter extends LlmAdapter {
     private readonly config;
@@ -49,13 +56,17 @@ export declare class OpenCodeGoAdapter extends LlmAdapter {
     private current;
     providerInfo(provider: string): LlmProviderInfo;
     providerRetryPolicy(provider: string): ResolvedRetryPolicy | undefined;
+    /**
+     * OpenCode Go does not publish provider-owned image-request pricing.
+     * @param _provider - provider route.
+     * @param _model - exact model id.
+     * @returns undefined so the Host uses its neutral image estimate.
+     */
+    imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;
     listModels(provider: string): Promise<readonly LlmModelInfo[]>;
     resolveModel(provider: string, model: string, signal?: AbortSignal): Promise<LlmResolvedModelInfo>;
     stream(options: GenerateOptions): AsyncIterable<StreamChunk>;
-    prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<{
-        model: LlmResolvedModelInfo;
-        stream: (options: GenerateOptions) => AsyncGenerator<StreamChunk, void, unknown>;
-    }>;
+    prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall>;
 }
 export { discoverModels };
 //# sourceMappingURL=adapter.d.ts.map

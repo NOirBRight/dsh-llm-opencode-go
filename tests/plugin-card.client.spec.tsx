@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
@@ -51,7 +51,7 @@ function props(overrides: Partial<OpenCodeGoPluginCardProps> = {}): OpenCodeGoPl
 }
 
 describe('OpenCodeGoPluginCard', () => {
-  it('stays visible in a remote browser and explains the loopback-only configuration plane', () => {
+  it('stays visible in a remote browser and explains non-loopback settings persistence', () => {
     const current = snapshot({
       status: 'unavailable',
       value: undefined,
