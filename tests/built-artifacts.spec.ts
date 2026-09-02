@@ -7,7 +7,7 @@ describe('published runtime artifacts', () => {
     expect(typeof host.apply).toBe('function')
     expect(typeof host.Config).toBe('function')
     expect(() => host.apply(new Context(), { remoteManagement: true } as never)).toThrow(
-      'remoteManagement is unsupported by the alpha.1 Host RPC',
+      'remoteManagement is unsupported by the Alpha.4 Host RPC',
     )
   })
 

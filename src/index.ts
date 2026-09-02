@@ -11,7 +11,7 @@ import { assertUsableApiKey, LlmError, resolveRetryPolicy, RetryPolicySchema } f
 import type { RetryPolicyConfig } from '@deepseek-ai/dsh-llm'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import { deepEqualJson, installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import type { SettingsPathOp } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import {
@@ -97,7 +97,7 @@ export const name = 'llm-opencode-go'
 export const inject = ['llm']
 
 const DEFAULT_MAX_RETRIES = 3
-const NS = settingsNamespace(OPENCODE_GO_SETTINGS_NAMESPACE)
+const NS = OPENCODE_GO_SETTINGS_NAMESPACE
 
 export interface Config {
   apiKeyEnv?: string
@@ -221,7 +221,7 @@ function usageFailure(error: unknown) {
 
 export function apply(ctx: Context, config: Config): void {
   if (Object.hasOwn(config, 'remoteManagement')) {
-    throw new Error('llm-opencode-go: remoteManagement is unsupported by the alpha.1 Host RPC; remove it from the plugin config')
+    throw new Error('llm-opencode-go: remoteManagement is unsupported by the Alpha.4 Host RPC; remove it from the plugin config')
   }
   let current: () => Config = () => config
   let lastRaw: Config | undefined
@@ -386,8 +386,10 @@ export function apply(ctx: Context, config: Config): void {
     })
     return connectionFiber.dispose
   }, 'llm-opencode-go: connection RPC injection')
-  installSettingsSection(ctx, NS, Config, config, {
-    setSource: (source) => { current = source },
-    onChange: ensureRegistrationFacts,
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, NS, Config, config, {
+      setSource: (source) => { current = source },
+      onChange: ensureRegistrationFacts,
+    })
   })
 }

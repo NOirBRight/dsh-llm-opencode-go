@@ -76,7 +76,7 @@ if (ownerPathInput === undefined || ownerSha === undefined || !/^[0-9a-f]{64}$/u
 const ownerPath = resolve(ownerPathInput)
 if (ownerPath.startsWith(root + sep) || !basename(ownerPath).endsWith('-' + ownerSha + '.tgz')) fail('owner input must be an external content-addressed archive')
 const ownerManifest = packageManifestFromArchive(ownerPath)
-if (ownerManifest.name !== 'dsh-llm-providers-ui' || ownerManifest.version !== '0.1.1') fail('owner input must be dsh-llm-providers-ui@0.1.1')
+if (ownerManifest.name !== 'dsh-llm-providers-ui' || ownerManifest.version !== '0.1.3') fail('owner input must be dsh-llm-providers-ui@0.1.3')
 const ownerBytes = readFileSync(ownerPath)
 const computedOwnerSha = createHash('sha256').update(ownerBytes).digest('hex')
 if (computedOwnerSha !== ownerSha) fail('owner input SHA-256 mismatch')

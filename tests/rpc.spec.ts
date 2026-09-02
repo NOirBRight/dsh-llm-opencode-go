@@ -65,7 +65,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
 
   it('rejects removed remoteManagement configuration before registering a route', () => {
     expect(() => apply(new Context(), { remoteManagement: true } as Config)).toThrow(
-      'remoteManagement is unsupported by the alpha.1 Host RPC',
+      'remoteManagement is unsupported by the Alpha.4 Host RPC',
     )
   })
 
