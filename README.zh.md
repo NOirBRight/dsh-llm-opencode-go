@@ -11,7 +11,10 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 本版本严格要求 DeepSeek Harness 0.1.2-alpha.4；Alpha.1–Alpha.3 不兼容，后续版本尚未验证。通过 profile manager 安装已发布的软件包：
 
 ~~~sh
-dsh plugin --profile web add --force https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go.tgz
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
 dsh web
 ~~~
 
@@ -119,7 +122,7 @@ Owner（Latest）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.3.tgz
 ~~~
 
 本 Provider（Latest）：
@@ -133,7 +136,7 @@ dsh plugin --profile web add --force \
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.2/dsh-llm-providers-ui.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
 ~~~

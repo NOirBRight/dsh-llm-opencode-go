@@ -23,7 +23,10 @@ Install `dsh-llm-providers-ui` explicitly in the profile alongside provider plug
 DeepSeek Harness `0.1.2-alpha.4` is required exactly; Alpha.1–Alpha.3 are unsupported. Users on older runtimes must keep the last compatible OpenCode Go tag. Install the published package through the profile manager:
 
 ~~~sh
-dsh plugin --profile web add --force https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go.tgz
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
+dsh plugin --profile web add --force \
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
 dsh web
 ~~~
 
@@ -121,7 +124,7 @@ Owner (Latest):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.3.tgz
 ~~~
 
 Provider (Latest):
@@ -135,7 +138,7 @@ Fixed versions (reproducible):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.2/dsh-llm-providers-ui.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
 ~~~
