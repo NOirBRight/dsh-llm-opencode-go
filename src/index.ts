@@ -14,6 +14,7 @@ import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import type { SettingsPathOp } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { allowDshRuntime } from './compatibility.ts'
 import {
   DEFAULT_CONTEXT_WINDOW,
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
@@ -220,6 +221,8 @@ function usageFailure(error: unknown) {
 }
 
 export function apply(ctx: Context, config: Config): void {
+  if (!allowDshRuntime(ctx.logger, 'dsh-llm-opencode-go', ['@deepseek-ai/dsh-llm'])) return
+
   if (Object.hasOwn(config, 'remoteManagement')) {
     throw new Error('llm-opencode-go: remoteManagement is unsupported by the Alpha.4 Host RPC; remove it from the plugin config')
   }
