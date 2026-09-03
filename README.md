@@ -6,6 +6,14 @@ OpenCode Go integration for DeepSeek Harness. Chat uses the shared pi-ai adapter
 
 The package root exposes the Cordis plugin contract and OpenCodeGoAdapter. The same artifact exports `./client`, which contributes the OpenCode Go card under Settings → LLM Providers. The protocol split is recorded in [ADR 0001](docs/adr/0001-one-route-triple-protocol.md).
 
+## Compatibility
+
+Verified runtimes are DeepSeek Harness `0.1.2-alpha.4` and `0.1.2-rc.1` on Cordis `4.0.2`; this record is evidence, not an allowlist.
+
+Unknown newer runtimes are attempted on a best-effort basis after one warning, and the plugin keeps its normal mount path.
+
+A reproduced failure is blocklisted only afterward; see the [compatibility records](package.json) for the affected version, reason, and evidence.
+
 
 ## LLM Providers UI ownership
 
@@ -17,28 +25,27 @@ The **LLM Providers** Settings page (`settings.section` `id: providers` with chi
 
 Install `dsh-llm-providers-ui` explicitly in the profile alongside provider plugins (see that package's `cordis.patch.yml`).
 
-
 ## Installation
 
-DeepSeek Harness `0.1.2-alpha.4` is required exactly; Alpha.1–Alpha.3 are unsupported. Users on older runtimes must keep the last compatible OpenCode Go tag. Install the published package through the profile manager:
+Install the published package through the profile manager:
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
 dsh web
 ~~~
 
 The package contains release-ready `lib` artifacts. Install `dsh-llm-providers-ui` alongside this plugin to provide the shared LLM Providers page.
 
-The Alpha.4 Host Connection RPC authenticates browser requests through the Web trust fence. Durable settings remain enabled only for loopback pages; non-loopback pages keep their settings process-local even when their authority is trusted. Use SSH forwarding when remote editing is needed.
+The Host Connection RPC authenticates browser requests through the Web trust fence. Durable settings remain enabled only for loopback pages; non-loopback pages keep their settings process-local even when their authority is trusted. Use SSH forwarding when remote editing is needed.
 
 Put this plugin in the profile bundle with `dsh-llm-providers-ui`; the owner enumerates every installed provider card.
 
 ## Web configuration
 
-Open Settings → LLM Providers → OpenCode Go. The provider-management RPC returns only decoded settings, revision, and value-free credential status; API keys are write-only and never echoed or logged. The Alpha.4 Connection RPC authenticates through the Web trust fence, while durable settings writes require a loopback settings scope; use SSH forwarding when the browser is remote.
+Open Settings → LLM Providers → OpenCode Go. The provider-management RPC returns only decoded settings, revision, and value-free credential status; API keys are write-only and never echoed or logged. The Connection RPC authenticates through the Web trust fence, while durable settings writes require a loopback settings scope; use SSH forwarding when the browser is remote.
 
 The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` (OpenAI-shaped ids only) and fills name, context, vision, thinking, and protocol from a local snapshot, then from a live [models.dev](https://models.dev) `opencode-go` overlay so newly published ids such as `omen-alpha` are not blank after Fetch.
 
@@ -124,7 +131,7 @@ Owner (Latest):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.3.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.5.tgz
 ~~~
 
 Provider (Latest):
@@ -138,9 +145,9 @@ Fixed versions (reproducible):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.3/dsh-llm-providers-ui-0.1.3.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -160,4 +167,4 @@ Configuration: use the plugin section in Settings for Web UI plugins, or the pro
 
 Rollback: rerun the fixed v0.1.17 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.18](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.18) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/SHA256SUMS).
+Release and integrity: [v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.19) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/SHA256SUMS).
