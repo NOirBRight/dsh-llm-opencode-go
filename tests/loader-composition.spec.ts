@@ -9,7 +9,7 @@ import Include from '@deepseek-ai/cordis-plugin-include'
 import LlmRuntime from '@deepseek-ai/dsh-llm'
 import * as OpenCodeGo from '../src/index.ts'
 import { assemble } from './assemble.ts'
-import { closeMockServers, mockServer, openAITextEvents } from './mock-server.ts'
+import { closeMockServers, mockServer, openAIResponsesTextEvents, openAITextEvents } from './mock-server.ts'
 
 let root: string | undefined
 let context: Context | undefined
@@ -23,7 +23,7 @@ afterEach(async () => {
   vi.unstubAllEnvs()
 })
 
-async function loadComposition(baseURL: string): Promise<Context> {
+async function loadComposition(baseURL: string, model = 'glm-5.3'): Promise<Context> {
   root = await mkdtemp(join(tmpdir(), 'dsh-llm-opencode-go-comp-'))
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
@@ -34,8 +34,8 @@ async function loadComposition(baseURL: string): Promise<Context> {
     '  config:',
     '    baseURL: ' + JSON.stringify(baseURL),
     '    models:',
-    '      - id: glm-5.3',
-    '        name: GLM-5.3',
+    '      - id: ' + model,
+    '        name: ' + model,
     '        contextWindow: 1000000',
     '        thinking: true',
     '',
@@ -84,5 +84,17 @@ describe('llm-opencode-go real composition', () => {
     expect(ctx.llm.listProviders().map(provider => provider.id)).toEqual(['opencode-go'])
     const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
     expect(result.finish).toMatchObject({ kind: 'error', failure: { code: 'MISSING_CREDENTIAL' } })
+  })
+
+  it('serializes forward Muse max to the Responses reasoning field', async () => {
+    vi.stubEnv('OPENCODE_API_KEY', 'test-key')
+    const server = await mockServer([{ kind: 'sse', events: openAIResponsesTextEvents }])
+    const ctx = await loadComposition(server.url, 'muse-spark-1.3-contributor')
+    const result = await assemble(ctx, { model: 'muse-spark-1.3-contributor', messages: [], reasoningEffort: 'max' })
+    expect(result.finish).toEqual({ kind: 'stop' })
+    expect(server.requests[0]).toMatchObject({
+      model: 'muse-spark-1.3-contributor',
+      reasoning: { effort: 'max' },
+    })
   })
 })

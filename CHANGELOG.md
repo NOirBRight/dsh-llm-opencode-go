@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.18 - 2026-09-03
+
+- Add `hy4-preview`, `qwen3.8-flash`, and `muse-spark-1.3-contributor` with their official protocol, context, vision, output, and reasoning metadata.
+- Correct the current OpenCode Go context and vision catalog from the 2026-09-03 OpenCode/models.dev snapshot while preserving existing GPT/Grok effort tables and defaults.
+- Keep Muse Spark 1.3 Contributor's forward `max` option visible; the current upstream still rejects that value with HTTP 400, while `xhigh` succeeds.
+
 ## 0.1.15
 
 - Settings → LLM Providers: drag cards to reorder; chat picker follows `llm-providers.order` via dsh-llm-providers-ui.

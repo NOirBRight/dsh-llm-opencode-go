@@ -31,6 +31,51 @@ describe('OpenCode Go model discovery', () => {
     expect(models[0]?.contextWindow).toBe(202752)
   })
 
+  it('enriches newly published models and corrects current capability metadata', () => {
+    const models = parseOpenCodeGoModels({
+      data: [
+        { id: 'hy4-preview' },
+        { id: 'qwen3.8-flash' },
+        { id: 'muse-spark-1.3-contributor' },
+        { id: 'glm-5.3-flash' },
+        { id: 'minimax-m2.5' },
+        { id: 'qwen3.5-plus' },
+      ],
+    })
+    expect(models).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'hy4-preview',
+        contextWindow: 1_024_000,
+        maxTokens: 64_000,
+        vision: false,
+        thinking: true,
+        defaultEffort: 'high',
+        api: 'openai-completions',
+      }),
+      expect.objectContaining({
+        id: 'qwen3.8-flash',
+        contextWindow: 1_000_000,
+        maxTokens: 131_072,
+        vision: true,
+        thinking: true,
+        defaultEffort: 'xhigh',
+        api: 'anthropic-messages',
+      }),
+      expect.objectContaining({
+        id: 'muse-spark-1.3-contributor',
+        contextWindow: 1_048_576,
+        maxTokens: 131_072,
+        vision: true,
+        thinking: true,
+        defaultEffort: 'max',
+        api: 'openai-responses',
+      }),
+      expect.objectContaining({ id: 'glm-5.3-flash', vision: true }),
+      expect.objectContaining({ id: 'minimax-m2.5', contextWindow: 204_800 }),
+      expect.objectContaining({ id: 'qwen3.5-plus', contextWindow: 262_144 }),
+    ]))
+  })
+
   it('fetches the public listing without transporting a credential', async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe('https://example.test/zen/go/v1/models')

@@ -31,6 +31,16 @@ export const openAITextEvents = [
   '[DONE]',
 ]
 
+/** A minimal complete OpenAI Responses SSE response. */
+export const openAIResponsesTextEvents = [
+  '{"type":"response.created","response":{"id":"resp-test","status":"in_progress"}}',
+  '{"type":"response.output_item.added","output_index":0,"item":{"type":"message","id":"msg-test","role":"assistant","content":[]}}',
+  '{"type":"response.output_text.delta","output_index":0,"content_index":0,"delta":"hello"}',
+  '{"type":"response.output_item.done","output_index":0,"item":{"type":"message","id":"msg-test","role":"assistant","content":[{"type":"output_text","text":"hello"}]}}',
+  '{"type":"response.completed","response":{"id":"resp-test","status":"completed","output":[],"usage":{"input_tokens":3,"output_tokens":1,"total_tokens":4}}}',
+  '[DONE]',
+]
+
 /** Local OpenCode Go API stand-in: replays scripted behaviors per request. */
 export async function mockServer(script: Behavior[]): Promise<MockServer> {
   const requests: unknown[] = []

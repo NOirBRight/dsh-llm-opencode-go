@@ -25,7 +25,7 @@ Alpha.4 Host Connection RPC 会通过 Web trust fence 认证浏览器请求。�
 
 打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。Alpha.4 Connection RPC 通过 Web trust fence 认证请求，但持久化设置写入需要 loopback settings scope；浏览器在远程主机时请使用 SSH 转发。
 
-卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用文档目录补全 context window、vision、thinking 以及 Completions / Responses / Messages。
+卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用 2026-09-03 的 OpenCode/models.dev 目录快照补全 context window、vision、thinking 以及 Completions / Responses / Messages。该快照已加入 `hy4-preview`、`qwen3.8-flash`、`muse-spark-1.3-contributor`，并校正当前模型的上下文和视觉能力。
 
 已配置 key 时，展开卡片会自动刷新订阅用量；没有 key 时用量区保持空闲。Host 读取 `GET &lt;baseURL&gt;/usage`，把 5 小时 / 每周 / 每月窗口渲染成已用百分比。凭据不会传到浏览器。
 
@@ -85,7 +85,7 @@ Provider route 仍是 `opencode-go`，设置命名空间仍是 `llm-opencode-go`
 
 `vision` 决定 text/image 输入。`thinking` 启用 reasoning effort。已知 Go 家族在会话未选择时使用插件 `defaultEffort`。`api` 用于协议分发；未知 id 回退到文档中的家族表。
 
-Muse Spark 需要 OpenCode 工作区打开训练数据模型开关。DeepSeek V4 Flash 需要打开中国区托管模型开关。那是 https://opencode.ai 上的账号选项，不是插件配置。
+Muse Spark 需要 OpenCode 工作区打开训练数据模型开关。DeepSeek V4 Flash 需要打开中国区托管模型开关。那是 https://opencode.ai 上的账号选项，不是插件配置。Muse Spark 1.3 Contributor 会按前瞻策略展示 `max`，但当前 OpenCode Go 上游会以 HTTP 400 拒绝该值；上游扩展枚举前请选 `xhigh`。
 
 ## 模型体验
 
@@ -135,7 +135,7 @@ dsh plugin --profile web add --force \
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.2/dsh-llm-providers-ui.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.17/dsh-llm-opencode-go.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/dsh-llm-opencode-go-0.1.18.tgz
 ~~~
 
 更新、卸载与验证：
@@ -155,4 +155,4 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 回滚：重新执行固定版本 v0.1.17 命令，确认插件列表后只重启一次 Web 服务。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
 
-Release 与完整性：[v0.1.17](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.17) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.17/SHA256SUMS)。
+Release 与完整性：[v0.1.18](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.18) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.18/SHA256SUMS)。

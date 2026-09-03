@@ -50,8 +50,17 @@ const FAMILIES: Partial<Record<ReturnType<typeof familyForModel>, FamilyPolicy>>
   longcat: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
 }
 
+const MODEL_POLICIES: Readonly<Record<string, FamilyPolicy>> = {
+  // These models publish effort sets that differ from their broader family.
+  'hy4-preview': { levels: pin({ off: 'none', high: 'high' }), defaultEffort: 'high' },
+  'qwen3.8-flash': { levels: pin({ low: 'low', medium: 'medium', xhigh: 'xhigh' }), defaultEffort: 'xhigh' },
+  // OpenCode currently rejects `max` for Muse Spark 1.3, but the forward
+  // catalog entry intentionally preserves the requested wire spelling.
+  'muse-spark-1.3-contributor': { levels: pin({ minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' }), defaultEffort: 'max' },
+}
+
 function policyFor(model: string): FamilyPolicy {
-  return FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
+  return MODEL_POLICIES[model.toLowerCase()] ?? FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
 }
 
 /** Supported thinking levels for one catalog row, in canonical order. */

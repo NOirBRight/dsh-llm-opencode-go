@@ -23,7 +23,7 @@ const KNOWN: readonly OpenCodeGoKnownModel[] = [
   { id: 'grok-4.5', name: 'Grok 4.5', contextWindow: 500_000, maxTokens: 500_000, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'high', family: 'grok' },
   { id: 'gpt-5.6-luna', name: 'GPT 5.6 Luna', contextWindow: 1_050_000, maxTokens: 128_000, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'max', family: 'gpt' },
   { id: 'muse-spark-1.2-contributor', name: 'Muse Spark 1.2 Contributor', contextWindow: 1_048_576, maxTokens: 131_072, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'xhigh', family: 'muse' },
-  { id: 'glm-5.3-flash', name: 'GLM-5.3-Flash', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'glm' },
+  { id: 'glm-5.3-flash', name: 'GLM-5.3-Flash', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: true, thinking: true, defaultEffort: 'high', family: 'glm' },
   { id: 'glm-5.3', name: 'GLM-5.3', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'max', family: 'glm' },
   { id: 'glm-5.2', name: 'GLM-5.2', contextWindow: 1_000_000, maxTokens: 131_072, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'max', family: 'glm' },
   { id: 'glm-5.1', name: 'GLM-5.1', contextWindow: 202_752, maxTokens: 32_768, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'glm' },
@@ -44,12 +44,15 @@ const KNOWN: readonly OpenCodeGoKnownModel[] = [
   { id: 'hy3-preview', name: 'Hy3 Preview', contextWindow: 256_000, maxTokens: 64_000, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'hy3' },
   { id: 'minimax-m3', name: 'MiniMax M3', contextWindow: 1_000_000, maxTokens: 131_072, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'max', family: 'minimax' },
   { id: 'minimax-m2.7', name: 'MiniMax M2.7', contextWindow: 204_800, maxTokens: 131_072, api: 'anthropic-messages', vision: false, thinking: true, defaultEffort: 'max', family: 'minimax' },
-  { id: 'minimax-m2.5', name: 'MiniMax M2.5', contextWindow: 196_608, maxTokens: 131_072, api: 'anthropic-messages', vision: false, thinking: true, defaultEffort: 'max', family: 'minimax' },
+  { id: 'minimax-m2.5', name: 'MiniMax M2.5', contextWindow: 204_800, maxTokens: 131_072, api: 'anthropic-messages', vision: false, thinking: true, defaultEffort: 'max', family: 'minimax' },
   { id: 'qwen3.8-max', name: 'Qwen3.8 Max', contextWindow: 1_000_000, maxTokens: 131_072, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'high', family: 'qwen' },
   { id: 'qwen3.7-max', name: 'Qwen3.7 Max', contextWindow: 1_000_000, maxTokens: 65_536, api: 'anthropic-messages', vision: false, thinking: true, defaultEffort: 'high', family: 'qwen' },
   { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus', contextWindow: 1_000_000, maxTokens: 65_536, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'high', family: 'qwen' },
   { id: 'qwen3.6-plus', name: 'Qwen3.6 Plus', contextWindow: 1_000_000, maxTokens: 65_536, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'high', family: 'qwen' },
-  { id: 'qwen3.5-plus', name: 'Qwen3.5 Plus', contextWindow: 1_000_000, maxTokens: 65_536, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'high', family: 'qwen' },
+  { id: 'qwen3.5-plus', name: 'Qwen3.5 Plus', contextWindow: 262_144, maxTokens: 65_536, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'high', family: 'qwen' },
+  { id: 'hy4-preview', name: 'Hy4 preview', contextWindow: 1_024_000, maxTokens: 64_000, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'hy3' },
+  { id: 'qwen3.8-flash', name: 'Qwen3.8 Flash', contextWindow: 1_000_000, maxTokens: 131_072, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'xhigh', family: 'qwen' },
+  { id: 'muse-spark-1.3-contributor', name: 'Muse Spark 1.3 Contributor', contextWindow: 1_048_576, maxTokens: 131_072, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'max', family: 'muse' },
 ]
 
 const BY_ID = new Map(KNOWN.map(model => [model.id, model]))
