@@ -33,7 +33,7 @@ Install the published package through the profile manager:
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
 dsh web
 ~~~
 
@@ -147,7 +147,7 @@ Fixed versions (reproducible):
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -167,4 +167,4 @@ Configuration: use the plugin section in Settings for Web UI plugins, or the pro
 
 Rollback: rerun the fixed v0.1.17 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.19) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/SHA256SUMS).
+Release and integrity: [v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.20) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/SHA256SUMS).

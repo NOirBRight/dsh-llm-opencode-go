@@ -7,7 +7,7 @@
     "commit": "4e84901e6471b79ec0338099867ebb4606d12bb5"
   },
   "roots": [
-    "dsh-llm-opencode-go@0.1.19"
+    "dsh-llm-opencode-go@0.1.20"
   ],
   "packages": [
     {
@@ -5570,7 +5570,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/cordis@4.0.2",
       "dependency": "@deepseek-ai/cordis",
       "section": "peerDependencies",
@@ -5578,7 +5578,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-api-remotes@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-api-remotes",
       "section": "peerDependencies",
@@ -5586,7 +5586,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-attachment@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-attachment",
       "section": "peerDependencies",
@@ -5594,7 +5594,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-connection@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-connection",
       "section": "peerDependencies",
@@ -5602,7 +5602,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-locale@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-locale",
       "section": "peerDependencies",
@@ -5610,7 +5610,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-ui-layout@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-ui-layout",
       "section": "peerDependencies",
@@ -5618,7 +5618,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-ui-renderer@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-ui-renderer",
       "section": "peerDependencies",
@@ -5626,7 +5626,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-ui-settings-plugins@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-ui-settings-plugins",
       "section": "peerDependencies",
@@ -5634,7 +5634,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-ui-settings@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-ui-settings",
       "section": "peerDependencies",
@@ -5642,7 +5642,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-client-ui-slots@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-client-ui-slots",
       "section": "peerDependencies",
@@ -5650,7 +5650,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-credentials@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-credentials",
       "section": "peerDependencies",
@@ -5658,7 +5658,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-invariants@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-invariants",
       "section": "peerDependencies",
@@ -5666,7 +5666,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-launch-environment@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-launch-environment",
       "section": "peerDependencies",
@@ -5674,7 +5674,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-llm-pi-ai@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-llm-pi-ai",
       "section": "peerDependencies",
@@ -5682,7 +5682,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-llm@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-llm",
       "section": "peerDependencies",
@@ -5690,7 +5690,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-settings@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-settings",
       "section": "peerDependencies",
@@ -5698,7 +5698,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-timeout@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-timeout",
       "section": "peerDependencies",
@@ -5706,7 +5706,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/dsh-util-values@0.1.2-alpha.4",
       "dependency": "@deepseek-ai/dsh-util-values",
       "section": "dependencies",
@@ -5714,7 +5714,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@deepseek-ai/schemastery@3.18.2",
       "dependency": "@deepseek-ai/schemastery",
       "section": "peerDependencies",
@@ -5722,7 +5722,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "@earendil-works/pi-ai@0.84.4",
       "dependency": "@earendil-works/pi-ai",
       "section": "dependencies",
@@ -5730,7 +5730,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "dsh-llm-providers-ui@0.1.5",
       "dependency": "dsh-llm-providers-ui",
       "section": "devDependencies",
@@ -5738,7 +5738,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "react-dom@18.3.1",
       "dependency": "react-dom",
       "section": "peerDependencies",
@@ -5746,7 +5746,7 @@
       "optional": false
     },
     {
-      "from": "dsh-llm-opencode-go@0.1.19",
+      "from": "dsh-llm-opencode-go@0.1.20",
       "to": "react@18.3.1",
       "dependency": "react",
       "section": "peerDependencies",

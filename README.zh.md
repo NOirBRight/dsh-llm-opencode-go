@@ -23,7 +23,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
 dsh web
 ~~~
 
@@ -146,7 +146,7 @@ dsh plugin --profile web add --force \
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/dsh-llm-opencode-go-0.1.19.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
 ~~~
 
 更新、卸载与验证：
@@ -166,4 +166,4 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 回滚：重新执行固定版本 v0.1.17 命令，确认插件列表后只重启一次 Web 服务。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
 
-Release 与完整性：[v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.19) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.19/SHA256SUMS)。
+Release 与完整性：[v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.20) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/SHA256SUMS)。
