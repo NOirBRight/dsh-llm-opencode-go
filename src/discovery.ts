@@ -10,6 +10,12 @@ import { OPENCODE_GO_PUBLIC_BASE_URL } from './client-contract.ts'
 import type { OpenCodeGoCatalogModelConfig } from './client-contract.ts'
 import { enrichModel } from './catalog.ts'
 import { isJsonRecord, readBoundedText, requireUsableApiKey } from './http.ts'
+import {
+  loadOpenCodeGoModelsDev,
+  MODELS_DEV_WAIT_MS,
+  peekOpenCodeGoModelsDev,
+} from './models-dev.ts'
+import type { OpenCodeGoModelsDevOverlay } from './models-dev.ts'
 
 export const PUBLIC_BASE_URL = OPENCODE_GO_PUBLIC_BASE_URL
 export const MAX_DISCOVERY_BYTES = 4 * 1024 * 1024
@@ -26,7 +32,10 @@ function nonEmpty(value: unknown): string | undefined {
 }
 
 /** Parse the OpenAI-shaped listing and attach documented metadata. */
-export function parseOpenCodeGoModels(value: unknown): OpenCodeGoDiscoveredModel[] {
+export function parseOpenCodeGoModels(
+  value: unknown,
+  overlay: OpenCodeGoModelsDevOverlay = new Map(),
+): OpenCodeGoDiscoveredModel[] {
   const data = isJsonRecord(value) ? value.data : undefined
   if (!Array.isArray(data)) throw new LlmError('OpenCode Go model listing has no data array', 'DISCOVERY_FAILED')
   const models: OpenCodeGoDiscoveredModel[] = []
@@ -43,13 +52,29 @@ export function parseOpenCodeGoModels(value: unknown): OpenCodeGoDiscoveredModel
       ...(name === undefined ? {} : { name }),
       ...(contextWindow === undefined ? {} : { contextWindow }),
       ...(maxTokens === undefined ? {} : { maxTokens }),
-    }))
+    }, overlay.get(id)))
   }
   return models
 }
 
 function listingURL(baseURL: string): string {
   return baseURL.replace(/\/+$/u, '') + '/models'
+}
+
+/** Prefer a warm cache; otherwise wait briefly while models.dev fills in the background. */
+async function overlayForListing(fetchImpl: typeof fetch): Promise<OpenCodeGoModelsDevOverlay> {
+  const cached = peekOpenCodeGoModelsDev()
+  const pending = loadOpenCodeGoModelsDev(fetchImpl)
+  if (cached !== undefined) return cached
+  const budget = AbortSignal.timeout(MODELS_DEV_WAIT_MS)
+  return await Promise.race([
+    pending,
+    new Promise<OpenCodeGoModelsDevOverlay>((resolve) => {
+      budget.addEventListener('abort', () => {
+        resolve(peekOpenCodeGoModelsDev() ?? new Map())
+      }, { once: true })
+    }),
+  ])
 }
 
 /** Fetch the current public model catalog. */
@@ -70,6 +95,7 @@ export async function discoverModels(
   const url = listingURL(baseURL)
   const timeout = AbortSignal.timeout(DISCOVERY_TIMEOUT_MS)
   const requestSignal = signal === undefined ? timeout : AbortSignal.any([signal, timeout])
+  const overlayPromise = overlayForListing(fetchImpl)
   let response: Response
   try {
     response = await fetchImpl(url, {
@@ -102,5 +128,5 @@ export async function discoverModels(
     if (signal?.aborted) throw new LlmError('OpenCode Go model discovery aborted', 'ABORTED', { cause: error })
     throw new LlmError('OpenCode Go model catalog did not return JSON', 'DISCOVERY_FAILED', { cause: error })
   }
-  return parseOpenCodeGoModels(body)
+  return parseOpenCodeGoModels(body, await overlayPromise)
 }

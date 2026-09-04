@@ -48,7 +48,8 @@ describe('OpenCode Go rich-discovery RPC', () => {
       controller.signal,
     )
     expect(result.ok).toBe(true)
-    const fetchOptions = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined
+    const listingCall = fetchSpy.mock.calls.find(([input]) => String(input).startsWith(server.url))
+    const fetchOptions = listingCall?.[1] as RequestInit | undefined
     expect(fetchOptions?.signal).toBeInstanceOf(AbortSignal)
     controller.abort()
     expect(fetchOptions?.signal?.aborted).toBe(true)

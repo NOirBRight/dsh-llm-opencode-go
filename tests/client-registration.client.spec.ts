@@ -4,7 +4,12 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenCodeGoSettingsView } from '../src/client-contract.ts'
+import {
+  OPENCODE_GO_SAVE_ENDPOINT,
+  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
+} from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
+import type { OpenCodeGoPluginCardFace } from '../src/client/OpenCodeGoPluginCard.tsx'
 
 afterEach(() => { vi.restoreAllMocks() })
 
@@ -146,6 +151,45 @@ describe('OpenCode Go client plugin registration', () => {
     expect(warning).not.toHaveBeenCalled()
     await fiber.dispose()
     removeOwner()
+    await ctx.fiber.dispose()
+  })
+
+  it('reuses the accepted revision on the next save', async () => {
+    let revision = 1
+    const call = vi.fn(async (_channel: string, endpoint: string, payload: unknown) => {
+      if (endpoint === OPENCODE_GO_SETTINGS_READ_ENDPOINT) {
+        return {
+          ok: true,
+          value: { settings: value, revision, credential: { configured: false, writable: true } },
+        }
+      }
+      if (endpoint === OPENCODE_GO_SAVE_ENDPOINT) {
+        const body = payload as { baseURL: string, models: OpenCodeGoSettingsView['models'], expectedRevision: number }
+        const next = { ...value, baseURL: body.baseURL, models: body.models }
+        revision += 1
+        return { ok: true, value: { settings: next, revision } }
+      }
+      return { ok: true, value: {} }
+    })
+    const ctx = new Context()
+    await ctx.plugin(FakeSlots).await()
+    const slots = ctx.get('slots') as FakeSlots
+    ctx.provide('locale', {
+      register: () => () => undefined,
+      bind: () => (key: string) => key,
+    } as never)
+    ctx.provide('connection', { rpc: { call } } as never)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
+    await vi.waitFor(() => {
+      expect(face.hooks.openCodeGoSettings.getSnapshot().status).toBe('ready')
+    })
+    await face.saveConfiguration({ ...value, models: [{ id: 'first' }] })
+    await face.saveConfiguration({ ...value, models: [{ id: 'first' }, { id: 'second' }] })
+    const saves = call.mock.calls.filter(entry => entry[1] === OPENCODE_GO_SAVE_ENDPOINT)
+    expect(saves.map(entry => (entry[2] as { expectedRevision: number }).expectedRevision)).toEqual([1, 2])
+    await fiber.dispose()
     await ctx.fiber.dispose()
   })
 })

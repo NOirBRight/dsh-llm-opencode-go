@@ -82,6 +82,7 @@ interface ModelDraft {
   vision?: boolean
   thinking?: boolean
   defaultEffort?: string
+  thinkingEfforts?: string[]
   tools?: boolean
 }
 
@@ -202,6 +203,12 @@ function newModelRowId(): string {
   return 'opencode-go-model-row-' + String(nextModelRow)
 }
 
+function effortRow(id: string, thinkingEfforts: string[] | undefined): Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking' | 'thinkingEfforts'> {
+  return thinkingEfforts === undefined
+    ? { id, thinking: true }
+    : { id, thinking: true, thinkingEfforts }
+}
+
 function modelDraftOf(model: OpenCodeGoCatalogModelConfig): ModelDraft {
   return {
     rowId: newModelRowId(),
@@ -218,9 +225,17 @@ function draftOf(settings: OpenCodeGoSettingsView): Draft {
   }
 }
 
+/** Same K/M spelling as Settings → Models: `1m` → 1000000, `256k` → 256000. */
 function integerOf(text: string): number | undefined {
-  if (text.trim().length === 0) return undefined
-  const value = Number(text)
+  const trimmed = text.trim()
+  if (trimmed.length === 0) return undefined
+  const match = /^(\d+(?:\.\d+)?)([km])?$/iu.exec(trimmed)
+  if (match === null || match[1] === undefined) return Number.NaN
+  const suffix = match[2]?.toLowerCase()
+  const scale = suffix === 'k' ? 1_000 : suffix === 'm' ? 1_000_000 : 1
+  const scaled = Number(match[1]) * scale
+  const rounded = Math.round(scaled)
+  const value = Math.abs(scaled - rounded) < 1e-6 ? rounded : scaled
   return Number.isSafeInteger(value) && value > 0 ? value : Number.NaN
 }
 
@@ -465,9 +480,9 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
         const next: ModelDraft = { ...model }
         if (patch.id !== undefined) {
           next.id = patch.id
-          if (next.thinking === true && next.defaultEffort !== undefined && !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
-            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true, defaultEffort: next.defaultEffort })
-              ?? resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
+          if (next.thinking === true && next.defaultEffort !== undefined && !isValidEffortForModel(effortRow(next.id, next.thinkingEfforts), next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort({ ...effortRow(next.id, next.thinkingEfforts), defaultEffort: next.defaultEffort })
+              ?? resolveEffectiveDefaultEffort(effortRow(next.id, next.thinkingEfforts))
             if (fallback !== undefined) next.defaultEffort = fallback
             else delete next.defaultEffort
           }
@@ -489,8 +504,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           if (patch.thinking === undefined) delete next.thinking
           else next.thinking = patch.thinking
           if (patch.thinking !== true) delete next.defaultEffort
-          else if (next.defaultEffort === undefined || !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
-            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
+          else if (next.defaultEffort === undefined || !isValidEffortForModel(effortRow(next.id, next.thinkingEfforts), next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort(effortRow(next.id, next.thinkingEfforts))
             if (fallback !== undefined) next.defaultEffort = fallback
             else delete next.defaultEffort
           }
@@ -897,7 +912,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                                                   onChange={(event) => { patchModel(index, { defaultEffort: event.target.value || undefined }) }}
                                                   aria-label={t('defaultEffort')}
                                                 >
-                                                  {openCodeGoSupportedEfforts({ id: model.id, thinking: true }).map(level => (
+                                                  {openCodeGoSupportedEfforts(effortRow(model.id, model.thinkingEfforts)).map(level => (
                                                     <option key={level} value={level}>{formatEffortName(level)}</option>
                                                   ))}
                                                 </select>

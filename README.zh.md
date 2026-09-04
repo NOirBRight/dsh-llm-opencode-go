@@ -28,7 +28,7 @@ Alpha.4 Host Connection RPC 会通过 Web trust fence 认证浏览器请求。�
 
 打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。Alpha.4 Connection RPC 通过 Web trust fence 认证请求，但持久化设置写入需要 loopback settings scope；浏览器在远程主机时请使用 SSH 转发。
 
-卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`，再用 2026-09-03 的 OpenCode/models.dev 目录快照补全 context window、vision、thinking 以及 Completions / Responses / Messages。该快照已加入 `hy4-preview`、`qwen3.8-flash`、`muse-spark-1.3-contributor`，并校正当前模型的上下文和视觉能力。
+卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`（只有 OpenAI 形 id），先用本地快照再叠加 live [models.dev](https://models.dev) 的 `opencode-go` 元数据补全名称、上下文、视觉和推理，因此新 id（如 `omen-alpha`）不会是空白行。
 
 已配置 key 时，展开卡片会自动刷新订阅用量；没有 key 时用量区保持空闲。Host 读取 `GET &lt;baseURL&gt;/usage`，把 5 小时 / 每周 / 每月窗口渲染成已用百分比。凭据不会传到浏览器。
 

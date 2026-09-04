@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fix: publish the accepted settings revision after save so a second Save does not hit a stale fence.
+- fix: accept K/M context spellings (`1m`, `256k`) on the catalog card.
+- feat: Fetch available models overlays live models.dev metadata so new Go ids such as `omen-alpha` arrive with context, vision, and reasoning instead of a blank row. Vision follows `modalities.input` (not `attachment`); effort menus persist `reasoning_options`. Fetch does not wait on a slow models.dev download; the parsed overlay is reused from disk for 24h.
+
 ## 0.1.18 - 2026-09-03
 
 - Add `hy4-preview`, `qwen3.8-flash`, and `muse-spark-1.3-contributor` with their official protocol, context, vision, output, and reasoning metadata.

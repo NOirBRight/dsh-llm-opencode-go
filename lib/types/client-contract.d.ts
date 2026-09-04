@@ -45,6 +45,8 @@ export interface OpenCodeGoCatalogModelConfig {
     thinking?: boolean;
     /** Chat-picker default when the conversation has not chosen a level. */
     defaultEffort?: string;
+    /** Live effort ids from models.dev; omission uses the family table. */
+    thinkingEfforts?: string[];
     /** Optional explicit protocol override; omission uses the documented mapping. */
     api?: OpenCodeGoApi;
     /** Legacy capability flag. Ignored at runtime; still decoded. */

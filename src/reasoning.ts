@@ -57,25 +57,45 @@ const MODEL_POLICIES: Readonly<Record<string, FamilyPolicy>> = {
   // OpenCode currently rejects `max` for Muse Spark 1.3, but the forward
   // catalog entry intentionally preserves the requested wire spelling.
   'muse-spark-1.3-contributor': { levels: pin({ minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' }), defaultEffort: 'max' },
+  'omen-alpha': { levels: pin({ low: 'low', high: 'high' }), defaultEffort: 'high' },
 }
 
 function policyFor(model: string): FamilyPolicy {
   return MODEL_POLICIES[model.toLowerCase()] ?? FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
 }
 
+/** Map a models.dev / wire effort token onto the plugin's level ids. */
+export function canonOpenCodeGoEffort(value: string): ModelThinkingLevel | undefined {
+  const key = value === 'none' ? 'off' : value
+  return (OPENCODE_GO_EFFORT_ORDER as readonly string[]).includes(key) ? key as ModelThinkingLevel : undefined
+}
+
+function levelsFromRow(model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinkingEfforts'>): ThinkingLevelMap {
+  const listed = model.thinkingEfforts
+  if (listed === undefined || listed.length === 0) return policyFor(model.id).levels
+  const supported: Partial<Record<ModelThinkingLevel, string>> = {}
+  for (const raw of listed) {
+    const level = canonOpenCodeGoEffort(raw)
+    if (level === undefined) continue
+    supported[level] = level === 'off' ? 'none' : level
+  }
+  if (OPENCODE_GO_EFFORT_ORDER.every(level => supported[level] === undefined)) return policyFor(model.id).levels
+  return pin(supported)
+}
+
 /** Supported thinking levels for one catalog row, in canonical order. */
 export function openCodeGoSupportedEfforts(
-  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'>,
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking' | 'thinkingEfforts'>,
 ): readonly ModelThinkingLevel[] {
   if (model.thinking !== true) return []
-  const levels = policyFor(model.id).levels
+  const levels = levelsFromRow(model)
   return OPENCODE_GO_EFFORT_ORDER.filter(level => levels[level] !== null && levels[level] !== undefined)
 }
 
 /** Thinking-level map for one catalog row, or undefined when thinking is off. */
 export function openCodeGoThinkingLevelMap(model: OpenCodeGoCatalogModelConfig): ThinkingLevelMap | undefined {
   if (model.thinking !== true) return undefined
-  return policyFor(model.id).levels
+  return levelsFromRow(model)
 }
 
 /** Plugin-owned default effort for a known family. */
@@ -90,7 +110,7 @@ export function formatEffortName(level: ModelThinkingLevel): string {
 
 /** Effective default for a draft row: explicit if valid, else family default, else first supported. */
 export function resolveEffectiveDefaultEffort(
-  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'> & { defaultEffort?: string },
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking' | 'thinkingEfforts'> & { defaultEffort?: string },
 ): ModelThinkingLevel | undefined {
   if (model.thinking !== true) return undefined
   const explicit = model.defaultEffort as ModelThinkingLevel | undefined
@@ -103,7 +123,7 @@ export function resolveEffectiveDefaultEffort(
 
 /** Whether an explicit effort is valid for the model's family. */
 export function isValidEffortForModel(
-  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking'>,
+  model: Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking' | 'thinkingEfforts'>,
   effort: string,
 ): boolean {
   if (model.thinking !== true) return false

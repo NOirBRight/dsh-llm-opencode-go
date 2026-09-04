@@ -53,6 +53,7 @@ const KNOWN: readonly OpenCodeGoKnownModel[] = [
   { id: 'hy4-preview', name: 'Hy4 preview', contextWindow: 1_024_000, maxTokens: 64_000, api: 'openai-completions', vision: false, thinking: true, defaultEffort: 'high', family: 'hy3' },
   { id: 'qwen3.8-flash', name: 'Qwen3.8 Flash', contextWindow: 1_000_000, maxTokens: 131_072, api: 'anthropic-messages', vision: true, thinking: true, defaultEffort: 'xhigh', family: 'qwen' },
   { id: 'muse-spark-1.3-contributor', name: 'Muse Spark 1.3 Contributor', contextWindow: 1_048_576, maxTokens: 131_072, api: 'openai-responses', vision: true, thinking: true, defaultEffort: 'max', family: 'muse' },
+  { id: 'omen-alpha', name: 'Omen Alpha', contextWindow: 500_000, maxTokens: 128_000, api: 'openai-completions', vision: true, thinking: true, defaultEffort: 'high', family: 'other' },
 ]
 
 const BY_ID = new Map(KNOWN.map(model => [model.id, model]))
@@ -98,22 +99,44 @@ export function familyForModel(id: string): OpenCodeGoFamily {
   return 'other'
 }
 
-/** Merge live listing fields with documented capacities without inventing unknown windows. */
-export function enrichModel(id: string, listed: { name?: string; contextWindow?: number; maxTokens?: number }): OpenCodeGoCatalogModelConfig {
+export type OpenCodeGoListedModel = {
+  name?: string
+  description?: string
+  contextWindow?: number
+  maxTokens?: number
+  vision?: boolean
+  thinking?: boolean
+  defaultEffort?: string
+  thinkingEfforts?: string[]
+}
+
+/** Merge live listing, models.dev, then the local snapshot. Do not invent a window. */
+export function enrichModel(
+  id: string,
+  listed: OpenCodeGoListedModel,
+  overlay?: OpenCodeGoListedModel,
+): OpenCodeGoCatalogModelConfig {
   const known = BY_ID.get(id)
-  const contextWindow = listed.contextWindow ?? known?.contextWindow
-  const maxTokens = listed.maxTokens ?? known?.maxTokens
-  const name = listed.name ?? known?.name ?? displayName(id)
-  const vision = known?.vision === true || id.toLowerCase().includes('vision') || id.toLowerCase().includes('omni')
-  const thinking = known?.thinking === true
+  const contextWindow = listed.contextWindow ?? overlay?.contextWindow ?? known?.contextWindow
+  const maxTokens = listed.maxTokens ?? overlay?.maxTokens ?? known?.maxTokens
+  const name = listed.name ?? overlay?.name ?? known?.name ?? displayName(id)
+  const description = listed.description ?? overlay?.description
+  const vision = listed.vision
+    ?? overlay?.vision
+    ?? (known?.vision === true || id.toLowerCase().includes('vision') || id.toLowerCase().includes('omni'))
+  const thinking = listed.thinking ?? overlay?.thinking ?? known?.thinking === true
+  const defaultEffort = listed.defaultEffort ?? overlay?.defaultEffort ?? known?.defaultEffort
+  const thinkingEfforts = listed.thinkingEfforts ?? overlay?.thinkingEfforts
   return {
     id,
     name,
+    ...(description === undefined || description === name ? {} : { description }),
     ...(contextWindow === undefined ? {} : { contextWindow }),
     ...(maxTokens === undefined ? {} : { maxTokens }),
     vision,
     thinking,
-    ...(known?.defaultEffort === undefined ? {} : { defaultEffort: known.defaultEffort }),
+    ...(defaultEffort === undefined || thinking !== true ? {} : { defaultEffort }),
+    ...(thinking !== true || thinkingEfforts === undefined || thinkingEfforts.length === 0 ? {} : { thinkingEfforts }),
     api: protocolForModel(id),
     tools: true,
   }

@@ -115,6 +115,15 @@ export function apply(ctx: ClientContext): void {
     if (!result.ok) throw new Error(result.error.message)
     const accepted = decodeOpenCodeGoSaveResult(result.value)
     if (accepted === undefined) throw new Error(t('requestFailed'))
+    updateSnapshot({
+      status: 'ready',
+      value: accepted.settings,
+      base: accepted.settings,
+      user: accepted.settings,
+      revision: accepted.revision,
+      writable: current.writable,
+      mode: current.mode,
+    })
     return accepted
   }
 

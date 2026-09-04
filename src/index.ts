@@ -118,6 +118,7 @@ const catalogModel: z<OpenCodeGoCatalogModel> = z.object({
   vision: z.boolean(),
   thinking: z.boolean(),
   defaultEffort: z.string(),
+  thinkingEfforts: z.array(z.string()),
   api: z.union(['openai-completions', 'openai-responses', 'anthropic-messages']),
   tools: z.boolean(),
 })
@@ -158,6 +159,7 @@ function resolveModels(models: readonly OpenCodeGoCatalogModel[] | undefined): O
       ...(model.vision === undefined ? {} : { vision: model.vision }),
       ...(model.thinking === undefined ? {} : { thinking: model.thinking }),
       ...(model.defaultEffort === undefined ? {} : { defaultEffort: model.defaultEffort }),
+      ...(model.thinkingEfforts === undefined ? {} : { thinkingEfforts: model.thinkingEfforts }),
       ...(model.api === undefined ? {} : { api: model.api }),
       ...(model.tools === undefined ? {} : { tools: model.tools }),
     }

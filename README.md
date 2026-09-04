@@ -40,7 +40,7 @@ Put this plugin in the profile bundle with `dsh-llm-providers-ui`; the owner enu
 
 Open Settings → LLM Providers → OpenCode Go. The provider-management RPC returns only decoded settings, revision, and value-free credential status; API keys are write-only and never echoed or logged. The Alpha.4 Connection RPC authenticates through the Web trust fence, while durable settings writes require a loopback settings scope; use SSH forwarding when the browser is remote.
 
-The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` and enriches ids with the 2026-09-03 OpenCode/models.dev catalog snapshot (context window, vision, thinking, and Completions / Responses / Messages). The snapshot includes `hy4-preview`, `qwen3.8-flash`, and `muse-spark-1.3-contributor`, plus current context and vision corrections.
+The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` (OpenAI-shaped ids only) and fills name, context, vision, thinking, and protocol from a local snapshot, then from a live [models.dev](https://models.dev) `opencode-go` overlay so newly published ids such as `omen-alpha` are not blank after Fetch.
 
 When a key is stored, expanding the card refreshes subscription usage. With no key, the usage section stays idle. The Host reads `GET &lt;baseURL&gt;/usage` and renders the 5-hour, weekly, and monthly windows as consumed-percentage meters. The credential never crosses to the browser.
 

@@ -375,4 +375,19 @@ describe('OpenCodeGoPluginCard', () => {
       models: [{ id: 'bravo' }, { id: 'charlie' }, { id: 'alpha' }],
     }), undefined)
   })
+
+  it('accepts K/M context window spellings', async () => {
+    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView) => Promise.resolve({ settings: next, revision: 2 }))
+    render(<OpenCodeGoPluginCard {...props({ saveConfiguration })} />)
+    fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: en.models }))
+    fireEvent.click(screen.getByRole('button', { name: en.addModel }))
+    fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'omen' } })
+    fireEvent.change(screen.getByLabelText(en.modelContext), { target: { value: '1m' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
+    expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
+      models: [expect.objectContaining({ id: 'omen', contextWindow: 1_000_000 })],
+    }), undefined)
+  })
 })
