@@ -10,6 +10,20 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import { createOpenCodeGoUsageReader } from 'dsh-llm-providers-ui/usage-readers'
+
+/** Register this card and its quota reader on the shared Provider directory. */
+function installProviderDirectory(ctx: { get(name: string, strict?: boolean): unknown, effect(effect: () => () => void, label?: string): void }): void {
+  let directory: { register(entry: { key: string, usage: unknown }): () => void } | undefined
+  try {
+    directory = ctx.get('providerDirectory', false) as { register(entry: { key: string, usage: unknown }): () => void } | undefined
+  } catch {
+    return
+  }
+  if (directory === undefined) return
+  ctx.effect(() => directory.register({ key: OPENCODE_GO_SETTINGS_NAMESPACE, usage: createOpenCodeGoUsageReader() }), 'dsh-llm-opencode-go: provider directory registration')
+}
+
 import {
   decodeOpenCodeGoDiscoveryResult,
   decodeOpenCodeGoSaveResult,
@@ -52,6 +66,8 @@ export const inject = ['slots', 'locale', 'connection']
 
 /** Register localized OpenCode Go configuration under Plugin configuration. */
 export function apply(ctx: ClientContext): void {
+  installProviderDirectory(ctx)
+
   const localeNamespace = 'settings.opencode-go'
   ctx.effect(
     () => ctx.locale.register(localeNamespace, { zh, en }),
