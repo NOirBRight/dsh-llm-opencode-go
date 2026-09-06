@@ -53,6 +53,5 @@ export interface OpenCodeGoPluginCardFace {
 }
 /** Props delivered by the Plugin configuration item slot. */
 export type OpenCodeGoPluginCardProps = PropsRuntime<'settings.provider.item'> & InjectFace<OpenCodeGoPluginCardFace>;
-/** Render the single-package OpenCode Go contribution under Plugin configuration. */
 export declare function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNode;
 //# sourceMappingURL=OpenCodeGoPluginCard.d.ts.map

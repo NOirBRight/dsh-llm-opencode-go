@@ -18,7 +18,8 @@ import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
 import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
-import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerUiCss, resetLabelOf } from './provider-chrome.tsx'
+import type { ProviderQuotaState } from 'dsh-llm-providers-ui/provider-ui';
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -104,12 +105,8 @@ type UsageState =
   | { status: 'error', message: string }
 
 const cardStyle: CSSProperties = {
-  overflow: 'hidden',
-  border: '1px solid var(--dsw-alias-border-l2)',
-  borderRadius: 10,
-  background: 'var(--dsw-alias-bg-module-platform)',
+  overflow: 'visible',
 }
-const headerStyle = providerHeaderStyle
 const bodyStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -387,6 +384,21 @@ function UsageBar({ label, usedText, window: quota, t, fallbackReset }: {
 }
 
 /** Render the single-package OpenCode Go contribution under Plugin configuration. */
+/** Headline remaining quota from real auth values; missing renders no meter, never zero. */
+function headlineQuotaOf(view: OpenCodeGoUsageView | undefined, t: OpenCodeGoPluginCardFace['t']): ProviderQuotaState | undefined {
+  const window = view?.monthly ?? view?.weekly ?? view?.session;
+  if (window === undefined) return undefined;
+  const remaining = 100 * (1 - window.usage);
+  if (!Number.isFinite(remaining) || remaining < 0 || remaining > 100) return undefined;
+  const label = view?.monthly !== undefined ? t('usageMonthly') : view?.weekly !== undefined ? t('usageWeekly') : t('usageSession');
+  const detail = resetLabelOf(window.resetsAt, usageResetCopy(t));
+  return {
+    remainingPercent: Math.round(remaining * 10) / 10,
+    label,
+    ...(detail === undefined ? {} : { detail }),
+  };
+}
+
 export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNode {
   const { t } = props
   const snapshot = props.useOpenCodeGoSettings((value: OpenCodeGoSettingsView) => value)
@@ -433,10 +445,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
   if (snapshot.status === 'unavailable') {
     return (
-      <li style={cardStyle}>
+      <li style={cardStyle} data-provider-card="" data-provider-role="llm">
+        <style>{providerUiCss}</style>
         <button
           type="button"
-          style={headerStyle}
+          data-provider-card-header=""
           aria-expanded={open}
           aria-label={t(open ? 'collapse' : 'expand') + ': ' + t('title')}
           onClick={() => { setOpen(!open) }}
@@ -446,11 +459,12 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
             mark={<BrandMark />}
             summary={formatProviderSummary(t('summaryOff'), t('summaryModels').replace('{count}', '0'))}
             open={open}
+            role="llm"
           />
         </button>
         {open
           ? (
-            <div style={bodyStyle}>
+            <div style={bodyStyle} data-provider-body="">
               <p style={statusStyle} role="status">{t('remoteAccess')}</p>
             </div>
           )
@@ -651,12 +665,15 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
     credential?.configured === true ? t('summaryOn') : t('summaryOff'),
     t('summaryModels').replace('{count}', String(draft?.models.length ?? 0)),
   )
+  const usageView = usage.status === 'ready' ? usage.usage : lastUsage
+  const headerQuota = credential?.configured === true ? headlineQuotaOf(usageView, t) : undefined
 
   return (
-    <li style={cardStyle}>
+    <li style={cardStyle} data-provider-card="" data-provider-role="llm">
+      <style>{providerUiCss}</style>
       <button
         type="button"
-        style={headerStyle}
+        data-provider-card-header=""
         aria-expanded={open}
         aria-label={t(open ? 'collapse' : 'expand') + ': ' + title}
         onClick={() => { setOpen(!open) }}
@@ -668,11 +685,13 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           open={open}
           unsaved={dirty}
           unsavedLabel={t('unsaved')}
+          role="llm"
+          {...(headerQuota === undefined ? {} : { quota: headerQuota })}
         />
       </button>
       {open
         ? (
-          <div style={bodyStyle}>
+          <div style={bodyStyle} data-provider-body="">
             <p style={hintStyle}>{t('description')}</p>
             {snapshot.status === 'loading' ? <p style={statusStyle}>{t('loading')}</p> : null}
             {snapshot.status === 'ready' && !snapshot.writable ? <p style={statusStyle}>{t('readOnly')}</p> : null}
@@ -839,13 +858,22 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                               const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
                               return t('dragModel') + ': ' + label
                             }}
+                            moveButtons
+                            moveUpLabel={(model, index) => {
+                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
+                              return t('moveUp') + ': ' + label
+                            }}
+                            moveDownLabel={(model, index) => {
+                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
+                              return t('moveDown') + ': ' + label
+                            }}
                             onReorder={(models) => { patchDraft({ models }) }}
                             renderItem={(model, index) => {
                               const key = rowKeyOf(model)
                               const expanded = expandedModels.has(key)
                               const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
                               return (
-                                <div data-model-row={label} style={modelContentStyle}>
+                                <div data-model-row={label} data-provider-model="" style={modelContentStyle}>
                                   <input
                                     style={rowInputStyle}
                                     value={model.id}

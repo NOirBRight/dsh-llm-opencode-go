@@ -25,6 +25,16 @@ import {
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
 import type { OpenCodeGoDiscoveryRequest, OpenCodeGoSettingsView } from '../client-contract.ts'
+import { createOpenCodeGoUsageReader } from 'dsh-llm-providers-ui/usage-readers';
+import type { ProviderUsageReader } from 'dsh-llm-providers-ui/usage-readers';
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    providerDirectory: {
+      register(declaration: { key: string; role?: 'llm' | 'agent'; header?: 'shared' | 'legacy'; usage?: ProviderUsageReader }): () => void;
+    };
+  }
+}
 import { OpenCodeGoPluginCard } from './OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardFace } from './OpenCodeGoPluginCard.tsx'
 import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCodeGoModelPicker.tsx'
@@ -189,6 +199,12 @@ export function apply(ctx: ClientContext): void {
       closeModelPicker: picker.close,
     }),
   }, OpenCodeGoPluginCard))
+  ctx.inject(['providerDirectory'], (ctx) => {
+    ctx.effect(
+      () => ctx.providerDirectory.register({ key: OPENCODE_GO_SETTINGS_NAMESPACE, role: 'llm', header: 'shared', usage: createOpenCodeGoUsageReader() }),
+      'dsh-llm-opencode-go: provider directory',
+    )
+  })
   ctx.effect(() => {
     let warned = false
     const check = (): void => {

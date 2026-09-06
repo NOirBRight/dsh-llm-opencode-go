@@ -331,63 +331,13 @@ export function UsageUpdatedAt(props: { at: Date | undefined; label: string }): 
   )
 }
 
-export const providerHeaderStyle: CSSProperties = {
-  boxSizing: 'border-box',
-  width: '100%',
-  minHeight: 68,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 16,
-  border: 0,
-  padding: '12px 14px',
-  background: 'transparent',
-  color: 'var(--dsw-alias-label-primary)',
-  font: 'inherit',
-  textAlign: 'left',
-  cursor: 'pointer',
-}
+/** Canonical shared header: delete per-provider fork, re-export built artifact. */
+export { ProviderCardHeader, providerUiCss } from 'dsh-llm-providers-ui/provider-ui';
+export type { ProviderCardHeaderProps, ProviderQuotaState } from 'dsh-llm-providers-ui/provider-ui';
 
 /** Join connection status and model count: "已登录 · 8 个模型". */
 export function formatProviderSummary(status: string, modelsLabel: string): string {
   return status.replace(/[。.]$/u, '') + ' · ' + modelsLabel
 }
 
-/** Fixed-height collapsed header: mark, title, status · count, chevron. */
-export function ProviderCardHeader(props: {
-  title: string
-  mark: ReactNode
-  summary: string
-  open: boolean
-  unsaved?: boolean
-  unsavedLabel?: string
-}): ReactNode {
-  return (
-    <>
-      <span style={{ display: 'flex', minWidth: 0, flex: 1, flexDirection: 'column', gap: 4 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, lineHeight: 1 }}>
-          <span style={{ width: 18, height: 18, flex: 'none', display: 'block', overflow: 'visible' }}>{props.mark}</span>
-          <span style={{ lineHeight: '20px' }}>{props.title}</span>
-        </span>
-        <span
-          style={{
-            fontSize: 13,
-            lineHeight: '18px',
-            color: 'var(--dsw-alias-label-tertiary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {props.summary}
-        </span>
-      </span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-        {props.unsaved === true && props.unsavedLabel !== undefined
-          ? <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-tertiary)' }}>{props.unsavedLabel}</span>
-          : null}
-        <span aria-hidden="true" style={{ fontSize: 18, transform: props.open ? 'rotate(180deg)' : 'none' }}>⌄</span>
-      </span>
-    </>
-  )
-}
+/** Removed per-provider header fork: canonical ProviderCardHeader re-exported above. */
