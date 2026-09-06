@@ -41,6 +41,8 @@ export declare const en: {
     readonly summaryOff: "Not configured";
     readonly modelDetails: "Details";
     readonly dragModel: "Drag to reorder";
+    readonly sortModels: "Sort";
+    readonly doneSorting: "Done";
     readonly moveUp: "Move up";
     readonly moveDown: "Move down";
     readonly fetchModels: "Fetch available models";

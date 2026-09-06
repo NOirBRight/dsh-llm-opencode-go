@@ -275,17 +275,19 @@ describe('OpenCodeGoPluginCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 89.1%`)).toBeTruthy() })
-    expect(screen.getByText(`${en.usageUsed} 18.8%`)).toBeTruthy()
+    await waitFor(() => { expect(screen.getAllByRole('meter', { name: en.usageWeekly }).length).toBeGreaterThan(0) })
+    for (const meter of screen.getAllByRole('meter', { name: en.usageWeekly })) {
+      expect(meter.getAttribute('aria-valuenow')).toBe('10.9')
+    }
+    expect(screen.getByRole('meter', { name: en.usageSession }).getAttribute('aria-valuenow')).toBe('81.2')
     expect(screen.getByText(en.usageModels)).toBeTruthy()
     expect(screen.getByText('glm-5.2')).toBeTruthy()
     expect(screen.getByText(`4133 ${en.usageRequests}`)).toBeTruthy()
     expect(screen.getByText(`264 ${en.usageRequests}`)).toBeTruthy()
     expect(fetchUsage).toHaveBeenCalledWith({ baseURL: 'https://opencode.ai/zen/go/v1' })
-    expect(screen.getByRole('progressbar', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('89')
 
     expect(screen.queryByRole('tooltip')).toBeNull()
-    expect(screen.getByRole('progressbar', { name: en.usageSession }).querySelectorAll('[data-usage-segment]')).toHaveLength(0)
+    expect(screen.queryByRole('progressbar')).toBeNull()
 
     const details = screen.getByRole('list', { name: en.usageModels })
     expect(details.style.maxHeight).toBe('')
@@ -318,7 +320,10 @@ describe('OpenCodeGoPluginCard', () => {
 
     await waitFor(() => { expect(screen.getByText(en.usageUnreachable)).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 10%`)).toBeTruthy() })
+    await waitFor(() => { expect(screen.getAllByRole('meter', { name: en.usageWeekly }).length).toBeGreaterThan(0) })
+    for (const meter of screen.getAllByRole('meter', { name: en.usageWeekly })) {
+      expect(meter.getAttribute('aria-valuenow')).toBe('90')
+    }
     expect(fetchUsage).toHaveBeenCalledTimes(2)
   })
 
@@ -346,6 +351,11 @@ describe('OpenCodeGoPluginCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
     fireEvent.click(screen.getByRole('button', { name: en.models }))
+    fireEvent.change(screen.getByLabelText(`${en.modelId} 1`) as HTMLInputElement, { target: { value: 'alpha-edited' } })
+    expect(screen.queryByRole('button', { name: `${en.moveUp}: alpha-edited` })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: en.sortModels }))
+    expect(screen.getByRole('button', { name: en.doneSorting })).toBeTruthy()
+    expect((screen.getByLabelText(`${en.modelId} 1`) as HTMLInputElement).value).toBe('alpha-edited')
 
     const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-model-row]'))
     for (const [index, row] of rows.entries()) {
@@ -356,7 +366,7 @@ describe('OpenCodeGoPluginCard', () => {
       })
     }
 
-    fireEvent.pointerDown(screen.getByLabelText(`${en.dragModel}: alpha`), {
+    fireEvent.pointerDown(screen.getByLabelText(`${en.dragModel}: alpha-edited`), {
       button: 0, pointerId: 1, clientX: 10, clientY: 10,
     })
     fireEvent.pointerMove(window, { pointerId: 1, clientX: 10, clientY: 140 })
@@ -364,7 +374,7 @@ describe('OpenCodeGoPluginCard', () => {
     // The preview order changes before release: sibling cards move out of the
     // way while a floating ghost follows the pointer.
     expect(Array.from(container.querySelectorAll('[data-model-row]')).map(row => row.getAttribute('data-model-row'))).toEqual([
-      'bravo', 'charlie', 'alpha',
+      'bravo', 'charlie', 'alpha-edited',
     ])
     expect(document.querySelector('[data-sortable-ghost="true"]')).not.toBeNull()
 
@@ -372,7 +382,7 @@ describe('OpenCodeGoPluginCard', () => {
     fireEvent.click(screen.getByRole('button', { name: en.save }))
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
-      models: [{ id: 'bravo' }, { id: 'charlie' }, { id: 'alpha' }],
+      models: [{ id: 'bravo' }, { id: 'charlie' }, { id: 'alpha-edited' }],
     }), undefined)
   })
 
