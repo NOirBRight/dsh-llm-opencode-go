@@ -18,7 +18,7 @@ import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
 import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
-import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerUiCss, resetLabelOf } from './provider-chrome.tsx'
+import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerUiCss, resetLabelOf } from './provider-chrome.tsx'
 import type { ProviderQuotaState } from 'dsh-llm-providers-ui/provider-ui';
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
@@ -432,7 +432,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           <ProviderCardHeader
             title={t('title')}
             mark={<BrandMark />}
-            summary={formatProviderSummary(t('summaryOff'), t('summaryModels').replace('{count}', '0'))}
+            summary={t('summaryModels').replace('{count}', '0')}
+            status={t('summaryOff')}
             open={open}
             role="llm"
           />
@@ -636,10 +637,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   else if (draft !== undefined && modelFailure(draft.models)) validation = t('invalidModel')
   else if (keyInvalid) validation = t('invalidApiKey')
 
-  const headerSummary = formatProviderSummary(
-    credential?.configured === true ? t('summaryOn') : t('summaryOff'),
-    t('summaryModels').replace('{count}', String(draft?.models.length ?? 0)),
-  )
+  const headerCount = t('summaryModels').replace('{count}', String(draft?.models.length ?? 0))
+  const headerStatus = credential?.configured === true ? t('summaryOn') : t('summaryOff')
   const usageView = usage.status === 'ready' ? usage.usage : lastUsage
   const headerQuota = credential?.configured === true ? headlineQuotaOf(usageView, t) : undefined
 
@@ -656,7 +655,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
         <ProviderCardHeader
           title={title}
           mark={<BrandMark />}
-          summary={headerSummary}
+          summary={headerCount}
+          status={headerStatus}
           open={open}
           unsaved={dirty}
           unsavedLabel={t('unsaved')}
