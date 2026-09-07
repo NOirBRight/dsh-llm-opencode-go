@@ -9,6 +9,7 @@ import {
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
 } from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
+import { clearProviderUsageCache, peekCachedUsage, rememberHeadlineQuota } from 'dsh-llm-providers-ui/usage-readers'
 import type { OpenCodeGoPluginCardFace } from '../src/client/OpenCodeGoPluginCard.tsx'
 
 afterEach(() => { vi.restoreAllMocks() })
@@ -189,6 +190,19 @@ describe('OpenCode Go client plugin registration', () => {
     await face.saveConfiguration({ ...value, models: [{ id: 'first' }, { id: 'second' }] })
     const saves = call.mock.calls.filter(entry => entry[1] === OPENCODE_GO_SAVE_ENDPOINT)
     expect(saves.map(entry => (entry[2] as { expectedRevision: number }).expectedRevision)).toEqual([1, 2])
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('purges persisted quota when the API key is stored without a provider directory', async () => {
+    rememberHeadlineQuota('llm-opencode-go', 'OpenCode Go', { label: 'S', remainingPercent: 80 })
+    const { ctx, slots } = await bench()
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
+    await face.storeApiKey('new-key')
+    expect(peekCachedUsage('llm-opencode-go')).toBeUndefined()
+    clearProviderUsageCache()
     await fiber.dispose()
     await ctx.fiber.dispose()
   })

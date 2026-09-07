@@ -51,6 +51,8 @@ The card saves the public base URL and model catalog together as one revision-fe
 
 When a key is stored, expanding the card refreshes subscription usage. With no key, the usage section stays idle. The Host reads `GET &lt;baseURL&gt;/usage` and renders the 5-hour, weekly, and monthly windows as consumed-percentage meters. The credential never crosses to the browser.
 
+The collapsed header falls back to the last successful quota from the shared browser cache while its credential is configured; storing a new key purges the cache in every bundle copy, even without providerDirectory.
+
 The model catalog starts collapsed and lists one row per model: a drag handle reorders rows (the order persists with the catalog), the chevron opens that row's context and capability flags, and the trash button removes it.
 
 ### Plugin configuration

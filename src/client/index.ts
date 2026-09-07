@@ -26,7 +26,7 @@ import {
 } from '../client-contract.ts'
 import type { OpenCodeGoDiscoveryRequest, OpenCodeGoSettingsView } from '../client-contract.ts'
 import type {} from 'dsh-llm-providers-ui/client';
-import { createOpenCodeGoUsageReader } from 'dsh-llm-providers-ui/usage-readers';
+import { createOpenCodeGoUsageReader, dropPersistedUsageKeys } from 'dsh-llm-providers-ui/usage-readers';
 import { OpenCodeGoPluginCard } from './OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardFace } from './OpenCodeGoPluginCard.tsx'
 import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCodeGoModelPicker.tsx'
@@ -128,6 +128,7 @@ export function apply(ctx: ClientContext): void {
     if (value.trim().length === 0) throw new Error(t('invalidApiKey'))
     const result = await callPlugin(OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, { apiKey: value })
     if (!result.ok) throw new Error(result.error.message)
+    dropPersistedUsageKeys([OPENCODE_GO_SETTINGS_NAMESPACE])
     ctx.get('providerDirectory')?.invalidateUsage(OPENCODE_GO_SETTINGS_NAMESPACE)
   }
 

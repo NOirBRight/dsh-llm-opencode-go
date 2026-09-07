@@ -373,7 +373,7 @@ describe('OpenCodeGoPluginCard', () => {
 
     // The preview order changes before release: sibling cards move out of the
     // way while a floating ghost follows the pointer.
-    expect(Array.from(container.querySelectorAll('[data-model-row]')).map(row => row.getAttribute('data-model-row'))).toEqual([
+    expect(Array.from(container.querySelectorAll('[data-sortable-row="true"]:not([data-sortable-ghost="true"]) [data-model-row]')).map(row => row.getAttribute('data-model-row'))).toEqual([
       'bravo', 'charlie', 'alpha-edited',
     ])
     expect(document.querySelector('[data-sortable-ghost="true"]')).not.toBeNull()
