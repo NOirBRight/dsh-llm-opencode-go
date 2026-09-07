@@ -2,14 +2,6 @@
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type { OpenCodeGoSettingsKey } from './locales.ts';
 declare module '@deepseek-ai/dsh-client-ui-slots' {
-    interface SlotMap {
-        'settings.provider.item': {
-            kind: 'keyed';
-            scope: 'root';
-        };
-    }
-}
-declare module '@deepseek-ai/dsh-client-ui-slots' {
     interface LocaleNamespaceMap {
         /** OpenCode Go Plugin configuration copy. */
         'settings.opencode-go': OpenCodeGoSettingsKey;

@@ -91,8 +91,8 @@ importers:
         specifier: ~18.3.1
         version: 18.3.7(@types/react@18.3.31)
       dsh-llm-providers-ui:
-        specifier: file:../dsh-providers-settings-a
-        version: file:../dsh-providers-settings-a(01c0c116bb00c99490b861f98033b917)
+        specifier: https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.10/dsh-llm-providers-ui-0.1.10.tgz
+        version: https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.10/dsh-llm-providers-ui-0.1.10.tgz(01c0c116bb00c99490b861f98033b917)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -990,8 +990,9 @@ packages:
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
-  dsh-llm-providers-ui@file:../dsh-providers-settings-a:
-    resolution: {directory: ../dsh-providers-settings-a, type: directory}
+  dsh-llm-providers-ui@https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.10/dsh-llm-providers-ui-0.1.10.tgz:
+    resolution: {integrity: sha512-8P6vR6fua5QWf0pVx4TqrT82Kh81po8rrbwT7uxfKOISfZ+5KstTnUYAcxSPRvMC/l9Mgc3aguthHtA/hcZj6Q==, tarball: https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.10/dsh-llm-providers-ui-0.1.10.tgz}
+    version: 0.1.10
     engines: {node: ^22.19.0 || >=24.0.0}
     peerDependencies:
       '@deepseek-ai/cordis': '>=4.0.2 <5.0.0'
@@ -2490,7 +2491,7 @@ snapshots:
 
   dom-accessibility-api@0.5.16: {}
 
-  dsh-llm-providers-ui@file:../dsh-providers-settings-a(01c0c116bb00c99490b861f98033b917):
+  dsh-llm-providers-ui@https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.10/dsh-llm-providers-ui-0.1.10.tgz(01c0c116bb00c99490b861f98033b917):
     dependencies:
       '@deepseek-ai/cordis': 4.0.2(@deepseek-ai/cordis-plugin-include@1.0.7)(@deepseek-ai/cordis-plugin-loader@1.0.3)
       '@deepseek-ai/dsh-client-locale': 0.1.2-alpha.4(@deepseek-ai/cordis@4.0.2)

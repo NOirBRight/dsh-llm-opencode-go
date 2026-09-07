@@ -1,7 +1,5 @@
 /** Shared Providers chrome: official DSH glyphs, auth row, chart skeleton. */
 import type { ReactNode } from 'react';
-/** Use the official 14px globe glyph on the LLM 供应商 nav row. */
-export declare function installProvidersNavIcon(): () => void;
 /** Account status on the left, sign-in / sign-out on the right. */
 export declare function AuthToolbar(props: {
     status: ReactNode;
@@ -73,7 +71,5 @@ export declare function UsageUpdatedAt(props: {
 /** Canonical shared header: delete per-provider fork, re-export built artifact. */
 export { ProviderCardHeader, ProviderQuotaMeter, providerUiCss } from 'dsh-llm-providers-ui/provider-ui';
 export type { ProviderCardHeaderProps, ProviderQuotaMeterProps, ProviderQuotaState } from 'dsh-llm-providers-ui/provider-ui';
-/** Join connection status and model count: "已登录 · 8 个模型". */
-export declare function formatProviderSummary(status: string, modelsLabel: string): string;
 /** Removed per-provider header fork: canonical ProviderCardHeader re-exported above. */
 //# sourceMappingURL=provider-chrome.d.ts.map

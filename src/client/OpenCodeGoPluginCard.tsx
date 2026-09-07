@@ -545,11 +545,13 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setUsage({ status: 'error', message: usageErrorOf(error, t) })
     }
   }
+  // Header quota loads collapsed once the credential is ready; idle status dedups so expansion never refires.
   useEffect(() => {
-    if (!open || snapshot.status !== 'ready') return
+    if (snapshot.status !== 'ready') return
     if (credential?.configured !== true) return
+    if (usage.status !== 'idle') return
     void loadUsage()
-  }, [open, snapshot.status, credential?.configured])
+  }, [snapshot.status, credential?.configured, usage.status])
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return
@@ -661,7 +663,12 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           unsaved={dirty}
           unsavedLabel={t('unsaved')}
           role="llm"
-          {...(headerQuota === undefined ? {} : { quota: headerQuota })}
+          {...(headerQuota === undefined
+            ? (credential?.configured === true && (usage.status === 'error' || usage.status === 'unsupported' || usage.status === 'needs-restart')
+              // Query attempted but no usable quota: unavailable dash, never a fabricated percent.
+              ? { quota: { label: t('usage') } }
+              : {})
+            : { quota: headerQuota })}
         />
       </button>
       {open
