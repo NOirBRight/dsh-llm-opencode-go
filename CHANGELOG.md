@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.22] - 2026-09-09
+
+- Advertise official Grok 4.6 reasoning (`low` / `medium` / `high` / `xhigh`); 4.5 stays three levels.
+- Stop filling undocumented families with Codex five-level `max`. GLM-5 / LongCat are thinking on/off; Qwen 3.5–3.7 are hybrid on/off; Qwen 3.8 stays `low` / `medium` / `xhigh`; MiMo including Pro stays `low` / `medium` / `xhigh`; Hy3 stays three levels; MiniMax M3 is on/off. Unknown families stay thinking on/off (`high`), not Codex `max`.
+
+
 ## [0.1.21] - 2026-09-07
 
 ### Changed
