@@ -29,6 +29,7 @@ import type { OpenCodeGoCatalogModelConfig } from './client-contract.ts'
 import { createOpenCodeGoPiAiProfile } from './pi-ai-profile.ts'
 import { createOpenCodeGoPiAiAuth } from './pi-ai-auth.ts'
 import { applyOpenCodeGoReasoningMetadata } from './reasoning.ts'
+import { runOpenCodeGoSession } from './session.ts'
 import type { WireError } from './types.ts'
 
 export type OpenCodeGoCatalogModel = OpenCodeGoCatalogModelConfig
@@ -224,9 +225,7 @@ export class OpenCodeGoAdapter extends LlmAdapter {
   }
 
   override async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
-    for await (const chunk of this.current().stream(narrowOpenCodeGoEscalationSchemas(options))) {
-      yield classifyOpenCodeGoTransientError(chunk)
-    }
+    yield* streamWithOpenCodeGoSession(options, opts => this.current().stream(opts))
   }
 
   override async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
@@ -235,12 +234,21 @@ export class OpenCodeGoAdapter extends LlmAdapter {
     const catalog = this.config.options().models.find(entry => entry.id === model)
     return {
       model: applyOpenCodeGoReasoningMetadata(inner.model, model, catalog?.defaultEffort),
-      stream: async function* (options: GenerateOptions) {
-        for await (const chunk of inner.stream(narrowOpenCodeGoEscalationSchemas(options))) {
-          yield classifyOpenCodeGoTransientError(chunk)
-        }
-      },
+      stream: options => streamWithOpenCodeGoSession(options, opts => inner.stream(opts)),
     }
+  }
+}
+
+async function* streamWithOpenCodeGoSession(
+  options: GenerateOptions,
+  stream: (options: GenerateOptions) => AsyncIterable<StreamChunk>,
+): AsyncIterable<StreamChunk> {
+  const sessionId = options.sessionId === undefined ? undefined : String(options.sessionId)
+  const iterator = stream(narrowOpenCodeGoEscalationSchemas(options))[Symbol.asyncIterator]()
+  for (;;) {
+    const step = await runOpenCodeGoSession(sessionId, () => iterator.next())
+    if (step.done) return
+    yield classifyOpenCodeGoTransientError(step.value)
   }
 }
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## [0.1.24] - 2026-09-10
+
+- Send `x-opencode-session` on every zen/go/v1 request (chat Completions/Responses/Messages, GET /models, GET /usage). Chat uses the DSH session id when present so Go can route and cache per conversation.
+
 ## [0.1.23] - 2026-09-10
 
 - Register OpenCode Go with the shared Provider Directory usage reader (same path as Antigravity) so quota is cached and shown in the task panel. Paint remaining quota from a local cache on first open, then refresh in the background. Saving no longer blanks the meter.

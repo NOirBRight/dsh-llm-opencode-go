@@ -9,6 +9,7 @@ import type { LlmModelDiscoveryRequest } from '@deepseek-ai/dsh-llm'
 import { OPENCODE_GO_PUBLIC_BASE_URL } from './client-contract.ts'
 import type { OpenCodeGoCatalogModelConfig } from './client-contract.ts'
 import { enrichModel, knownModel } from './catalog.ts'
+import { openCodeGoSessionHeaders } from './session.ts'
 import { isJsonRecord, readBoundedText, requireUsableApiKey } from './http.ts'
 import {
   loadOpenCodeGoModelsDev,
@@ -104,6 +105,7 @@ export async function discoverModels(
         accept: 'application/json',
         ...(apiKey === undefined ? {} : { authorization: 'Bearer ' + apiKey }),
         ...attributionHeaders(),
+        ...openCodeGoSessionHeaders('ses_dsh-opencode-go-discovery'),
       },
       redirect: 'error',
       signal: requestSignal,

@@ -25,7 +25,7 @@ This follows the Ollama plugin split: the plugin does not own a private SSE tran
 
 ## Endpoint mapping
 
-The settings section stores `https://opencode.ai/zen/go/v1`. Chat, listing, and usage all use that origin.
+The settings section stores `https://opencode.ai/zen/go/v1`. Chat, listing, and usage all use that origin. Every request includes `x-opencode-session` (DSH session id on chat; stable ids on listing and usage).
 
 ## Model catalog
 

@@ -38,7 +38,9 @@ describe('OpenCode Go subscription usage', () => {
   it('reads GET /usage with the Bearer key', async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe('https://opencode.ai/zen/go/v1/usage')
-      expect(new Headers(init?.headers).get('authorization')).toBe('Bearer key')
+      const headers = new Headers(init?.headers)
+      expect(headers.get('authorization')).toBe('Bearer key')
+      expect(headers.get('x-opencode-session')).toBe('ses_dsh-opencode-go-usage')
       return new Response(JSON.stringify({
         usage: { rolling: { status: 'ok', percent: 12, resetsAt: '2026-08-13T00:00:00.000Z' } },
       }))

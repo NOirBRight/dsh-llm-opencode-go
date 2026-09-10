@@ -8,6 +8,7 @@ import { attributionHeaders, INVALID_CREDENTIAL_CODE, LlmError } from '@deepseek
 import { OPENCODE_GO_PUBLIC_BASE_URL } from './client-contract.ts'
 import type { OpenCodeGoUsageModelCount, OpenCodeGoUsageView, OpenCodeGoUsageWindow } from './client-contract.ts'
 import { isJsonRecord, readBoundedText, requireUsableApiKey } from './http.ts'
+import { openCodeGoSessionHeaders } from './session.ts'
 
 export const DEFAULT_USAGE_REQUEST_TIMEOUT_MS = 15_000
 export const OPENCODE_GO_USAGE_UNSUPPORTED = 'OPENCODE_GO_USAGE_UNSUPPORTED'
@@ -124,6 +125,7 @@ export async function readOpenCodeGoUsage(
         accept: 'application/json',
         authorization: 'Bearer ' + apiKey,
         ...attributionHeaders(),
+        ...openCodeGoSessionHeaders('ses_dsh-opencode-go-usage'),
       },
       redirect: 'error',
       signal,

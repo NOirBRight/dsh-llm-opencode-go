@@ -10,6 +10,7 @@ import { anthropicMessagesApi } from '@earendil-works/pi-ai/api/anthropic-messag
 import type { Api, Model, Provider } from '@earendil-works/pi-ai'
 import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
 import { OPENCODE_GO_PROVIDER } from './client-contract.ts'
+import { openCodeGoProfileHeaders } from './session.ts'
 import type { OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adapter.ts'
 import { protocolForModel } from './catalog.ts'
 import { openCodeGoThinkingLevelMap, openCodeGoSupportedEfforts } from './reasoning.ts'
@@ -139,6 +140,7 @@ export function createOpenCodeGoPiAiProfile(
     requestImagePixelBudget: 2048 * 2048,
     requestImageMaxBytes: 1024 * 1024,
     retryPolicy: connection.retryPolicy,
+    headers: openCodeGoProfileHeaders(),
     piProvider,
     configuredMaxTokens,
   } as ResolvedPiAiProviderProfile
