@@ -8,7 +8,7 @@ import { attributionHeaders, INVALID_CREDENTIAL_CODE, LlmError } from '@deepseek
 import type { LlmModelDiscoveryRequest } from '@deepseek-ai/dsh-llm'
 import { OPENCODE_GO_PUBLIC_BASE_URL } from './client-contract.ts'
 import type { OpenCodeGoCatalogModelConfig } from './client-contract.ts'
-import { enrichModel } from './catalog.ts'
+import { enrichModel, knownModel } from './catalog.ts'
 import { isJsonRecord, readBoundedText, requireUsableApiKey } from './http.ts'
 import {
   loadOpenCodeGoModelsDev,
@@ -128,5 +128,11 @@ export async function discoverModels(
     if (signal?.aborted) throw new LlmError('OpenCode Go model discovery aborted', 'ABORTED', { cause: error })
     throw new LlmError('OpenCode Go model catalog did not return JSON', 'DISCOVERY_FAILED', { cause: error })
   }
-  return parseOpenCodeGoModels(body, await overlayPromise)
+  let overlay = await overlayPromise
+  let models = parseOpenCodeGoModels(body, overlay)
+  if (models.some(model => !overlay.has(model.id) && knownModel(model.id) === undefined)) {
+    overlay = await loadOpenCodeGoModelsDev(fetchImpl, requestSignal, { force: true })
+    models = parseOpenCodeGoModels(body, overlay)
+  }
+  return models
 }

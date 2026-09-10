@@ -19,10 +19,16 @@ function pin(supported: Partial<Record<ModelThinkingLevel, string>>): ThinkingLe
   }
 }
 
+const OFF_HIGH = pin({ off: 'none', high: 'high' })
 const OFF_HIGH_MAX = pin({ off: 'none', high: 'high', max: 'max' })
 const OFF_LOW_HIGH_MAX = pin({ off: 'none', low: 'low', high: 'high', max: 'max' })
 const LOW_MEDIUM_HIGH = pin({ low: 'low', medium: 'medium', high: 'high' })
+const LOW_MEDIUM_HIGH_XHIGH = pin({ low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh' })
 const LOW_MEDIUM_HIGH_XHIGH_MAX = pin({ low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' })
+const LOW_MEDIUM_XHIGH = pin({ low: 'low', medium: 'medium', xhigh: 'xhigh' })
+const LOW_HIGH_MAX = pin({ low: 'low', high: 'high', max: 'max' })
+const HIGH_MAX = pin({ high: 'high', max: 'max' })
+const HIGH_ONLY = pin({ high: 'high' })
 const MINIMAL_TO_XHIGH = pin({ minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh' })
 const GENERIC = pin({ off: 'none', low: 'low', medium: 'medium', high: 'high', max: 'max' })
 
@@ -37,31 +43,60 @@ interface FamilyPolicy {
 }
 
 const FAMILIES: Partial<Record<ReturnType<typeof familyForModel>, FamilyPolicy>> = {
-  grok: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
+  grok: { levels: LOW_MEDIUM_HIGH_XHIGH, defaultEffort: 'high' },
   gpt: { levels: LOW_MEDIUM_HIGH_XHIGH_MAX, defaultEffort: 'medium' },
   muse: { levels: MINIMAL_TO_XHIGH, defaultEffort: 'xhigh' },
-  glm: { levels: OFF_HIGH_MAX, defaultEffort: 'max' },
-  kimi: { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'max' },
-  qwen: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
+  glm: { levels: LOW_HIGH_MAX, defaultEffort: 'max' },
+  kimi: { levels: LOW_HIGH_MAX, defaultEffort: 'max' },
+  qwen: { levels: OFF_HIGH, defaultEffort: 'high' },
   deepseek: { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'max' },
-  mimo: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
-  hy3: { levels: pin({ off: 'none', low: 'low', high: 'high' }), defaultEffort: 'high' },
-  minimax: { levels: GENERIC, defaultEffort: 'max' },
-  longcat: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
+  mimo: { levels: LOW_MEDIUM_XHIGH, defaultEffort: 'xhigh' },
+  hy3: { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
+  minimax: { levels: HIGH_ONLY, defaultEffort: 'high' },
+  longcat: { levels: OFF_HIGH, defaultEffort: 'high' },
 }
 
 const MODEL_POLICIES: Readonly<Record<string, FamilyPolicy>> = {
   // These models publish effort sets that differ from their broader family.
-  'hy4-preview': { levels: pin({ off: 'none', high: 'high' }), defaultEffort: 'high' },
-  'qwen3.8-flash': { levels: pin({ low: 'low', medium: 'medium', xhigh: 'xhigh' }), defaultEffort: 'xhigh' },
+  'grok-4.6': { levels: LOW_MEDIUM_HIGH_XHIGH, defaultEffort: 'high' },
+  'grok-4.5': { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' },
+  'hy4-preview': { levels: OFF_HIGH, defaultEffort: 'high' },
+  'qwen3.8-flash': { levels: LOW_MEDIUM_XHIGH, defaultEffort: 'xhigh' },
   // OpenCode currently rejects `max` for Muse Spark 1.3, but the forward
   // catalog entry intentionally preserves the requested wire spelling.
   'muse-spark-1.3-contributor': { levels: pin({ minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' }), defaultEffort: 'max' },
   'omen-alpha': { levels: pin({ low: 'low', high: 'high' }), defaultEffort: 'high' },
 }
 
+function classifyPolicy(model: string): FamilyPolicy {
+  const id = model.toLowerCase()
+  const exact = MODEL_POLICIES[id]
+  if (exact !== undefined) return exact
+  if (id.startsWith('glm-5.3')) return { levels: LOW_HIGH_MAX, defaultEffort: 'max' }
+  if (id.startsWith('glm-5.2')) return { levels: OFF_HIGH_MAX, defaultEffort: 'max' }
+  if (id.startsWith('glm-5.1')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id === 'glm-5' || id.startsWith('glm-5-')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id.startsWith('kimi-k3')) return { levels: LOW_HIGH_MAX, defaultEffort: 'max' }
+  if (id.startsWith('kimi-k2.7')) return { levels: HIGH_ONLY, defaultEffort: 'high' }
+  if (id.startsWith('kimi-k2.6')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id.startsWith('kimi-k2.5')) return { levels: LOW_HIGH_MAX, defaultEffort: 'max' }
+  if (id.startsWith('qwen3.8')) return { levels: LOW_MEDIUM_XHIGH, defaultEffort: 'xhigh' }
+  if (id.startsWith('qwen3.7') || id.startsWith('qwen3.6') || id.startsWith('qwen3.5')) {
+    return { levels: OFF_HIGH, defaultEffort: 'high' }
+  }
+  if (id.startsWith('mimo-')) return { levels: LOW_MEDIUM_XHIGH, defaultEffort: 'xhigh' }
+  if (id.startsWith('hy4')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id === 'hy3' || id.startsWith('hy3-')) return { levels: LOW_MEDIUM_HIGH, defaultEffort: 'high' }
+  if (id.startsWith('minimax-m3')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id.startsWith('minimax-')) return { levels: HIGH_ONLY, defaultEffort: 'high' }
+  if (id.startsWith('longcat-')) return { levels: OFF_HIGH, defaultEffort: 'high' }
+  if (id.includes('vision') && id.startsWith('deepseek-v4-flash')) return { levels: HIGH_MAX, defaultEffort: 'max' }
+  if (id.startsWith('deepseek-')) return { levels: OFF_LOW_HIGH_MAX, defaultEffort: 'max' }
+  return FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
+}
+
 function policyFor(model: string): FamilyPolicy {
-  return MODEL_POLICIES[model.toLowerCase()] ?? FAMILIES[familyForModel(model)] ?? { levels: GENERIC, defaultEffort: 'medium' }
+  return classifyPolicy(model)
 }
 
 /** Map a models.dev / wire effort token onto the plugin's level ids. */

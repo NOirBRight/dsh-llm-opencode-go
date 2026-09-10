@@ -18,5 +18,7 @@ export declare function parseOpenCodeGoModelsDevRow(id: string, value: unknown):
 /** Parse the opencode-go.models object out of a models.dev API document. */
 export declare function parseOpenCodeGoModelsDev(value: unknown): OpenCodeGoModelsDevOverlay;
 /** Fetch models.dev, returning an empty overlay when the document is unavailable. */
-export declare function loadOpenCodeGoModelsDev(fetchImpl?: typeof fetch, signal?: AbortSignal): Promise<OpenCodeGoModelsDevOverlay>;
+export declare function loadOpenCodeGoModelsDev(fetchImpl?: typeof fetch, signal?: AbortSignal, options?: {
+    force?: boolean;
+}): Promise<OpenCodeGoModelsDevOverlay>;
 //# sourceMappingURL=models-dev.d.ts.map

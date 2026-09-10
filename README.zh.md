@@ -23,7 +23,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/dsh-llm-opencode-go-0.1.21.tgz
 dsh web
 ~~~
 
@@ -39,7 +39,7 @@ Alpha.4 Host Connection RPC 会通过 Web trust fence 认证浏览器请求。�
 
 卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`（只有 OpenAI 形 id），先用本地快照再叠加 live [models.dev](https://models.dev) 的 `opencode-go` 元数据补全名称、上下文、视觉和推理，因此新 id（如 `omen-alpha`）不会是空白行。
 
-已配置 key 时，展开卡片会自动刷新订阅用量；没有 key 时用量区保持空闲。Host 读取 `GET &lt;baseURL&gt;/usage`，把 5 小时 / 每周 / 每月窗口渲染成已用百分比。凭据不会传到浏览器。
+已配置 key 时，卡片折叠也会加载账户额度（获取模型或刷新会再拉一次）。Host 读取 `GET &lt;baseURL&gt;/usage`；5 小时 / 周 / 月剩余额度首次打开用本地缓存，再后台刷新。凭据不会传到浏览器。
 
 模型目录默认折叠，展开后一行一个模型：左侧把手可拖动排序（顺序随目录一起保存），右侧箭头展开该行的上下文和能力开关，垃圾桶按钮删除该行。
 
@@ -97,7 +97,7 @@ Provider route 仍是 `opencode-go`，设置命名空间仍是 `llm-opencode-go`
 
 `vision` 决定 text/image 输入。`thinking` 启用 reasoning effort。已知 Go 家族在会话未选择时使用插件 `defaultEffort`。`api` 用于协议分发；未知 id 回退到文档中的家族表。
 
-Muse Spark 需要 OpenCode 工作区打开训练数据模型开关。DeepSeek V4 Flash 需要打开中国区托管模型开关。那是 https://opencode.ai 上的账号选项，不是插件配置。Muse Spark 1.3 Contributor 会按前瞻策略展示 `max`，但当前 OpenCode Go 上游会以 HTTP 400 拒绝该值；上游扩展枚举前请选 `xhigh`。
+Muse Spark 需要 OpenCode 工作区打开训练数据模型开关。DeepSeek V4 Flash 和 V4.1 Flash（`deepseek-flash`）需要打开中国区托管模型开关。那是 https://opencode.ai 上的账号选项，不是插件配置。Muse Spark 1.3 Contributor 会按前瞻策略展示 `max`，但当前 OpenCode Go 上游会以 HTTP 400 拒绝该值；上游扩展枚举前请选 `xhigh`。
 
 ## 模型体验
 
@@ -146,7 +146,7 @@ dsh plugin --profile web add --force \
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/dsh-llm-opencode-go-0.1.21.tgz
 ~~~
 
 更新、卸载与验证：
@@ -166,4 +166,4 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 回滚：重新执行固定版本 v0.1.17 命令，确认插件列表后只重启一次 Web 服务。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
 
-Release 与完整性：[v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.20) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/SHA256SUMS)。
+Release 与完整性：[v0.1.21](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.21) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/SHA256SUMS)。

@@ -55,6 +55,7 @@ describe('OpenCode Go model discovery', () => {
         { id: 'minimax-m2.5' },
         { id: 'qwen3.5-plus' },
         { id: 'omen-alpha' },
+        { id: 'deepseek-flash' },
       ],
     })
     expect(models).toEqual(expect.arrayContaining([
@@ -96,6 +97,16 @@ describe('OpenCode Go model discovery', () => {
         vision: true,
         thinking: true,
         defaultEffort: 'high',
+        api: 'openai-completions',
+      }),
+      expect.objectContaining({
+        id: 'deepseek-flash',
+        name: 'DeepSeek V4.1 Flash',
+        contextWindow: 1_000_000,
+        maxTokens: 384_000,
+        vision: true,
+        thinking: true,
+        defaultEffort: 'max',
         api: 'openai-completions',
       }),
     ]))
@@ -218,6 +229,40 @@ describe('OpenCode Go model discovery', () => {
       thinking: true,
       defaultEffort: 'high',
       thinkingEfforts: ['low', 'high'],
+    })
+  })
+
+  it('refreshes a warm overlay when GET /models has an unknown id', async () => {
+    let modelsDevCalls = 0
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === MODELS_DEV_URL) {
+        modelsDevCalls += 1
+        const models = modelsDevCalls === 1
+          ? { stale: { id: 'stale', limit: { context: 1_000, output: 100 } } }
+          : {
+            stale: { id: 'stale', limit: { context: 1_000, output: 100 } },
+            'brand-new': {
+              id: 'brand-new',
+              name: 'Brand New',
+              reasoning: true,
+              reasoning_options: [{ type: 'effort', values: ['low', 'high'] }],
+              limit: { context: 99_000, output: 4_000 },
+              modalities: { input: ['text'] },
+            },
+          }
+        return new Response(JSON.stringify({ 'opencode-go': { models } }), { status: 200 })
+      }
+      return new Response(JSON.stringify({ data: [{ id: 'brand-new' }] }), { status: 200 })
+    })
+    await loadOpenCodeGoModelsDev(fetchImpl)
+    const result = await discoverModels({ baseURL: 'https://example.test/zen/go/v1' }, undefined, fetchImpl)
+    expect(modelsDevCalls).toBe(2)
+    expect(result[0]).toMatchObject({
+      id: 'brand-new',
+      name: 'Brand New',
+      contextWindow: 99_000,
+      thinking: true,
     })
   })
 

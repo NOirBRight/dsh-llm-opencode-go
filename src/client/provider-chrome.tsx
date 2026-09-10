@@ -1,6 +1,7 @@
 /** Shared Providers chrome: official DSH glyphs, auth row, chart skeleton. */
 
 import type { CSSProperties, ReactNode } from 'react'
+import { ensureProviderUiCss } from './approved-a-header.tsx'
 
 const LABELS = new Set(['LLM 供应商', 'LLM Providers', '供应商', 'Providers'])
 const MARK = 'data-dsh-providers-icon'
@@ -27,6 +28,7 @@ function patchNav(): void {
 export function installProvidersNavIcon(): () => void {
   if (typeof document === 'undefined' || document.body === null) return () => {}
   ensureMotionStyles()
+  ensureProviderUiCss()
   let scheduled = false
   let frame = 0
   const flush = (): void => {
@@ -230,7 +232,7 @@ function interpolateCopy(template: string, params: Record<string, unknown>): str
 function chineseLocale(locales?: string | readonly string[]): boolean {
   const locale = typeof locales === 'string'
     ? locales
-    : locales?.[0] ?? (typeof navigator === 'undefined' ? undefined : navigator.language)
+    : locales?.[0] ?? (typeof document === 'undefined' ? undefined : document.documentElement.lang || undefined)
   return typeof locale === 'string' && /^zh\b/iu.test(locale)
 }
 
@@ -334,7 +336,7 @@ export function UsageUpdatedAt(props: { at: Date | undefined; label: string }): 
 export const providerHeaderStyle: CSSProperties = {
   boxSizing: 'border-box',
   width: '100%',
-  minHeight: 68,
+  minHeight: 76,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -348,46 +350,5 @@ export const providerHeaderStyle: CSSProperties = {
   cursor: 'pointer',
 }
 
-/** Join connection status and model count: "已登录 · 8 个模型". */
-export function formatProviderSummary(status: string, modelsLabel: string): string {
-  return status.replace(/[。.]$/u, '') + ' · ' + modelsLabel
-}
-
-/** Fixed-height collapsed header: mark, title, status · count, chevron. */
-export function ProviderCardHeader(props: {
-  title: string
-  mark: ReactNode
-  summary: string
-  open: boolean
-  unsaved?: boolean
-  unsavedLabel?: string
-}): ReactNode {
-  return (
-    <>
-      <span style={{ display: 'flex', minWidth: 0, flex: 1, flexDirection: 'column', gap: 4 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, lineHeight: 1 }}>
-          <span style={{ width: 18, height: 18, flex: 'none', display: 'block', overflow: 'visible' }}>{props.mark}</span>
-          <span style={{ lineHeight: '20px' }}>{props.title}</span>
-        </span>
-        <span
-          style={{
-            fontSize: 13,
-            lineHeight: '18px',
-            color: 'var(--dsw-alias-label-tertiary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {props.summary}
-        </span>
-      </span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-        {props.unsaved === true && props.unsavedLabel !== undefined
-          ? <span style={{ fontSize: 12, color: 'var(--dsw-alias-label-tertiary)' }}>{props.unsavedLabel}</span>
-          : null}
-        <span aria-hidden="true" style={{ fontSize: 18, transform: props.open ? 'rotate(180deg)' : 'none' }}>⌄</span>
-      </span>
-    </>
-  )
-}
+export { ProviderCardHeader, ProviderQuotaMeter, ensureProviderUiCss } from './approved-a-header.tsx'
+export type { ProviderHeadlineQuota } from './approved-a-header.tsx'

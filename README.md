@@ -33,7 +33,7 @@ Install the published package through the profile manager:
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/dsh-llm-opencode-go-0.1.21.tgz
 dsh web
 ~~~
 
@@ -49,7 +49,7 @@ Open Settings → LLM Providers → OpenCode Go. The provider-management RPC ret
 
 The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` (OpenAI-shaped ids only) and fills name, context, vision, thinking, and protocol from a local snapshot, then from a live [models.dev](https://models.dev) `opencode-go` overlay so newly published ids such as `omen-alpha` are not blank after Fetch.
 
-When a key is stored, expanding the card refreshes subscription usage. With no key, the usage section stays idle. The Host reads `GET &lt;baseURL&gt;/usage` and renders the 5-hour, weekly, and monthly windows as consumed-percentage meters. The credential never crosses to the browser.
+When a key is stored, the card loads account quota while collapsed (and again on Fetch/Refresh). The Host reads `GET &lt;baseURL&gt;/usage`; remaining 5-hour, weekly, and monthly windows paint from a local cache on first open, then refresh in the background. The credential never crosses to the browser.
 
 The model catalog starts collapsed and lists one row per model: a drag handle reorders rows (the order persists with the catalog), the chevron opens that row's context and capability flags, and the trash button removes it.
 
@@ -107,7 +107,7 @@ The provider route remains `opencode-go` and the settings namespace remains `llm
 
 `vision` controls text/image input modalities. `thinking` enables selectable reasoning efforts. Known Go families pin a plugin `defaultEffort` when the session has not picked one. `api` is required for dispatch; unknown ids fall back to the documented family table.
 
-Muse Spark requires the OpenCode workspace toggle for training-data models. DeepSeek V4 Flash requires the toggle for models hosted in China. Those are account flags on https://opencode.ai, not plugin settings. The forward `max` option for Muse Spark 1.3 Contributor is intentionally shown, but the current OpenCode Go upstream rejects that value with HTTP 400; select `xhigh` until the upstream enum is expanded.
+Muse Spark requires the OpenCode workspace toggle for training-data models. DeepSeek V4 Flash and V4.1 Flash (`deepseek-flash`) require the toggle for models hosted in China. Those are account flags on https://opencode.ai, not plugin settings. The forward `max` option for Muse Spark 1.3 Contributor is intentionally shown, but the current OpenCode Go upstream rejects that value with HTTP 400; select `xhigh` until the upstream enum is expanded.
 
 ## Model experience
 
@@ -147,7 +147,7 @@ Fixed versions (reproducible):
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.5/dsh-llm-providers-ui-0.1.5.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/dsh-llm-opencode-go-0.1.20.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/dsh-llm-opencode-go-0.1.21.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -167,4 +167,4 @@ Configuration: use the plugin section in Settings for Web UI plugins, or the pro
 
 Rollback: rerun the fixed v0.1.17 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.19](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.20) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.20/SHA256SUMS).
+Release and integrity: [v0.1.21](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.21) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.21/SHA256SUMS).

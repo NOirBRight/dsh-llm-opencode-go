@@ -31,11 +31,26 @@ import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCo
 import type { OpenCodeGoModelPickerFace } from './OpenCodeGoModelPicker.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenCodeGoSettingsKey } from './locales.ts'
+import { createOpenCodeGoUsageReader } from './usage-reader.ts'
 
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'settings.provider.item': { kind: 'keyed'; scope: 'root' }
+  }
+}
+
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    providerDirectory?: {
+      register(declaration: {
+        key: string
+        role?: 'llm' | 'agent'
+        header?: 'shared' | 'legacy'
+        usage?: ReturnType<typeof createOpenCodeGoUsageReader>
+      }): () => void
+      invalidateUsage(key: string): void
+    }
   }
 }
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -131,6 +146,7 @@ export function apply(ctx: ClientContext): void {
     if (value.trim().length === 0) throw new Error(t('invalidApiKey'))
     const result = await callPlugin(OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, { apiKey: value })
     if (!result.ok) throw new Error(result.error.message)
+    ctx.get('providerDirectory')?.invalidateUsage(OPENCODE_GO_SETTINGS_NAMESPACE)
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {
@@ -189,6 +205,19 @@ export function apply(ctx: ClientContext): void {
       closeModelPicker: picker.close,
     }),
   }, OpenCodeGoPluginCard))
+  ctx.inject(['providerDirectory'], (scope) => {
+    const directory = scope.providerDirectory
+    if (directory === undefined) return
+    scope.effect(
+      () => directory.register({
+        key: OPENCODE_GO_SETTINGS_NAMESPACE,
+        role: 'llm',
+        header: 'shared',
+        usage: createOpenCodeGoUsageReader(),
+      }),
+      'dsh-llm-opencode-go: provider directory',
+    )
+  })
   ctx.effect(() => {
     let warned = false
     const check = (): void => {

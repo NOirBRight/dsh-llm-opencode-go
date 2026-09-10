@@ -187,13 +187,15 @@ async function fetchAndStore(
 export async function loadOpenCodeGoModelsDev(
   fetchImpl: typeof fetch = fetch,
   signal?: AbortSignal,
+  options?: { force?: boolean },
 ): Promise<OpenCodeGoModelsDevOverlay> {
   hydrateFromDisk()
   const now = Date.now()
-  if (cache !== undefined && now - cache.at < REFRESH_AFTER_MS) return cache.overlay
-  if (inflight !== undefined) return inflight
+  const force = options?.force === true
+  if (!force && cache !== undefined && now - cache.at < REFRESH_AFTER_MS) return cache.overlay
+  if (!force && inflight !== undefined) return inflight
   inflight = fetchAndStore(fetchImpl, signal).finally(() => { inflight = undefined })
-  if (cache !== undefined) {
+  if (!force && cache !== undefined) {
     void inflight
     return cache.overlay
   }

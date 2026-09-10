@@ -29,7 +29,7 @@ export declare class OpenCodeGoModelPickerController {
     subscribe: (listener: Listener) => (() => void);
     /** Open immediately while discovery loads with the current selection captured. */
     begin(onAdopt: Adopt, initiallyPicked?: ReadonlySet<string>): void;
-    /** Populate an open loading picker, retaining only current ids present in the result. */
+    /** Populate an open loading picker, retaining current ids; empty catalogs adopt the live list. */
     complete(candidates: readonly OpenCodeGoCatalogModelConfig[]): void;
     /** Keep the open picker visible with a discovery failure. */
     fail(message: string): void;

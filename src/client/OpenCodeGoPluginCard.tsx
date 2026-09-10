@@ -18,7 +18,9 @@ import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
 import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
-import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
+import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -178,14 +180,6 @@ const disclosureStyle: CSSProperties = {
 // modelDetailStyle / capabilitiesStyle imported
 const statusStyle: CSSProperties = { margin: 0, fontSize: 13, color: 'var(--dsw-alias-label-secondary)' }
 const errorStyle: CSSProperties = { ...statusStyle, color: 'var(--dsw-alias-state-error-primary)' }
-const barTrackStyle: CSSProperties = {
-  boxSizing: 'border-box',
-  height: 14,
-  display: 'flex',
-  overflow: 'hidden',
-  borderRadius: 999,
-  background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent)',
-}
 const usageListStyle: CSSProperties = {
   margin: 0,
   padding: 0,
@@ -345,44 +339,53 @@ function usageResetCopy(t: OpenCodeGoPluginCardFace['t']): { at: string, atDays:
   return { at: t('usageResetAt'), atDays: t('usageResetAtDays') }
 }
 
-/** One quota window: an aggregate consumed percentage and solid meter. */
+function resetDetail(
+  iso: string | undefined,
+  t: OpenCodeGoPluginCardFace['t'],
+  fallback?: string,
+): string | undefined {
+  return resetLabelOf(iso, usageResetCopy(t)) ?? fallback
+}
 
-function UsageBar({ label, usedText, window: quota, t, fallbackReset }: {
+function headlineQuota(
+  usage: UsageState,
+  lastUsage: OpenCodeGoUsageView | undefined,
+  t: OpenCodeGoPluginCardFace['t'],
+): ProviderHeadlineQuota | undefined {
+  const view = usage.status === 'ready' ? usage.usage : lastUsage
+  const weekly = view?.weekly
+  const monthly = view?.monthly
+  const session = view?.session
+  const window = weekly ?? monthly ?? session
+  if (window !== undefined) {
+    const label = weekly !== undefined ? t('usageWeekly') : monthly !== undefined ? t('usageMonthly') : t('usageSession')
+    return {
+      label,
+      remainingPercent: remainingPercent(window.usage),
+      ...(() => {
+        const detail = resetDetail(window.resetsAt, t)
+        return detail === undefined ? {} : { detail }
+      })(),
+    }
+  }
+  if (usage.status === 'error' || usage.status === 'unsupported') return { label: t('usage') }
+  return undefined
+}
+
+/** One quota window in remaining-percent Approved A meter language. */
+function UsageBar({ label, window: quota, t, fallbackReset }: {
   label: string
-  usedText: string
   window: OpenCodeGoUsageWindow
   t: OpenCodeGoPluginCardFace['t']
   fallbackReset?: string
 }): ReactNode {
-  const percent = Math.round(quota.usage * 1000) / 10
-  const fill = Math.min(100, Math.max(0, percent))
+  const detail = resetDetail(quota.resetsAt, t, fallbackReset)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-        <span style={labelStyle}>{label}</span>
-        <span style={hintStyle}>{usedText} {percent}%</span>
-      </div>
-      <div
-        style={barTrackStyle}
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(fill)}
-      >
-        <span
-          data-usage-fill="true"
-          style={{
-            width: String(fill) + '%',
-            height: '100%',
-            flex: 'none',
-            background: 'var(--dsw-alias-state-business-primary)',
-            transition: 'width 200ms ease',
-          }}
-        />
-      </div>
-      <UsageResetAt label={resetLabelOf(quota.resetsAt, usageResetCopy(t)) ?? fallbackReset} />
-    </div>
+    <ProviderQuotaMeter
+      label={label}
+      remainingPercent={remainingPercent(quota.usage)}
+      {...detail === undefined ? {} : { detail }}
+    />
   )
 }
 
@@ -401,8 +404,9 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const [fetching, setFetching] = useState(false)
   const [failure, setFailure] = useState<string | undefined>(undefined)
   const [notice, setNotice] = useState<string | undefined>(undefined)
-  const [usage, setUsage] = useState<UsageState>({ status: 'idle' })
-  const [lastUsage, setLastUsage] = useState<OpenCodeGoUsageView | undefined>(undefined)
+  const cachedUsage = peekOpenCodeGoUsageView()
+  const [usage, setUsage] = useState<UsageState>(cachedUsage === undefined ? { status: 'idle' } : { status: 'ready', usage: cachedUsage })
+  const [lastUsage, setLastUsage] = useState<OpenCodeGoUsageView | undefined>(cachedUsage)
   const [usageUpdatedAt, setUsageUpdatedAt] = useState<Date | undefined>(undefined)
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [expandedModels, setExpandedModels] = useState<ReadonlySet<string>>(new Set())
@@ -433,10 +437,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
   if (snapshot.status === 'unavailable') {
     return (
-      <li style={cardStyle}>
+      <li style={cardStyle} data-provider-card="" data-provider-role="llm">
         <button
           type="button"
           style={headerStyle}
+          data-provider-card-header=""
           aria-expanded={open}
           aria-label={t(open ? 'collapse' : 'expand') + ': ' + t('title')}
           onClick={() => { setOpen(!open) }}
@@ -444,13 +449,15 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           <ProviderCardHeader
             title={t('title')}
             mark={<BrandMark />}
-            summary={formatProviderSummary(t('summaryOff'), t('summaryModels').replace('{count}', '0'))}
+            summary={t('summaryModels').replace('{count}', '0')}
+            status={t('summaryOff')}
+            role="llm"
             open={open}
           />
         </button>
         {open
           ? (
-            <div style={bodyStyle}>
+            <div style={bodyStyle} data-provider-body="">
               <p style={statusStyle} role="status">{t('remoteAccess')}</p>
             </div>
           )
@@ -531,7 +538,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
 
   const loadUsage = async (): Promise<void> => {
-    setUsage({ status: 'loading' })
+    if (peekOpenCodeGoUsageView() === undefined) setUsage({ status: 'loading' })
     try {
       if (apiKey.trim().length > 0) {
         await props.storeApiKey(apiKey.trim())
@@ -542,6 +549,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       })
       if (read.kind === 'ok') {
         setLastUsage(read.usage)
+        persistOpenCodeGoUsage(read.usage)
         setUsageUpdatedAt(new Date())
       }
       setUsage(
@@ -556,10 +564,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
     }
   }
   useEffect(() => {
-    if (!open || snapshot.status !== 'ready') return
+    if (snapshot.status !== 'ready') return
     if (credential?.configured !== true) return
     void loadUsage()
-  }, [open, snapshot.status, credential?.configured])
+  }, [snapshot.status, credential?.configured])
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return
@@ -633,8 +641,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setSourceRevision(accepted.revision)
       setApiKey('')
       setNotice(t('saved'))
-      setUsage({ status: 'idle' })
       void refreshCredential()
+      void loadUsage()
     } catch (error: unknown) {
       setFailure(messageOf(error, t('requestFailed')))
     } finally {
@@ -647,16 +655,16 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   else if (draft !== undefined && modelFailure(draft.models)) validation = t('invalidModel')
   else if (keyInvalid) validation = t('invalidApiKey')
 
-  const headerSummary = formatProviderSummary(
-    credential?.configured === true ? t('summaryOn') : t('summaryOff'),
-    t('summaryModels').replace('{count}', String(draft?.models.length ?? 0)),
-  )
+  const headerCount = t('summaryModels').replace('{count}', String(draft?.models.length ?? 0))
+  const headerStatus = credential?.configured === true ? t('summaryOn') : t('summaryOff')
+  const headerQuota = headlineQuota(usage, lastUsage, t)
 
   return (
-    <li style={cardStyle}>
+    <li style={cardStyle} data-provider-card="" data-provider-role="llm">
       <button
         type="button"
         style={headerStyle}
+        data-provider-card-header=""
         aria-expanded={open}
         aria-label={t(open ? 'collapse' : 'expand') + ': ' + title}
         onClick={() => { setOpen(!open) }}
@@ -664,7 +672,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
         <ProviderCardHeader
           title={title}
           mark={<BrandMark />}
-          summary={headerSummary}
+          summary={headerCount}
+          status={headerStatus}
+          role="llm"
+          {...headerQuota === undefined ? {} : { quota: headerQuota }}
           open={open}
           unsaved={dirty}
           unsavedLabel={t('unsaved')}
@@ -672,8 +683,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       </button>
       {open
         ? (
-          <div style={bodyStyle}>
-            <p style={hintStyle}>{t('description')}</p>
+          <div style={bodyStyle} data-provider-body="">
             {snapshot.status === 'loading' ? <p style={statusStyle}>{t('loading')}</p> : null}
             {snapshot.status === 'ready' && !snapshot.writable ? <p style={statusStyle}>{t('readOnly')}</p> : null}
             {draft === undefined
@@ -690,7 +700,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         aria-label={t('apiKey')}
                         autoComplete="off"
                         value={apiKey}
-                        placeholder={credential?.configured ? t('apiKeyConfigured') : t('apiKeyPlaceholder')}
+                        placeholder={credential?.configured ? t('apiKeyReplace') : t('apiKeyPlaceholder')}
                         disabled={busy || credential?.writable === false}
                         onChange={(event) => { setApiKey(event.target.value); setFailure(undefined); setNotice(undefined) }}
                       />
@@ -698,7 +708,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         {apiKey.length > 0
                           ? t('apiKeyPending')
                           : credential?.configured
-                            ? t('apiKeyConfigured')
+                            ? t('summaryOn')
                             : t('apiKeyUnset')}
                       </span>
                     </label>
@@ -712,6 +722,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         disabled={disabled}
                         onChange={(event) => { patchDraft({ baseURL: event.target.value }) }}
                       />
+                      <span style={hintStyle}>{t('baseURLHint')}</span>
                     </label>
                   </section>
 
@@ -744,7 +755,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageSession')}
-                                usedText={t('usageUsed')}
                                 window={bars.session}
                                 t={t}
                                 fallbackReset={t('usageResetEveryHours').replace('{count}', '5')}
@@ -755,7 +765,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageWeekly')}
-                                usedText={t('usageUsed')}
                                 window={bars.weekly}
                                 t={t}
                                 fallbackReset={t('usageResetEveryDays').replace('{count}', '7')}
@@ -766,7 +775,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageMonthly')}
-                                usedText={t('usageUsed')}
                                 window={bars.monthly}
                                 t={t}
                                 fallbackReset={t('usageResetEveryDays').replace('{count}', '30')}

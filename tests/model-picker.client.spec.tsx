@@ -31,11 +31,13 @@ describe('OpenCodeGoModelPicker', () => {
     const adopted = vi.fn()
     controller.begin(adopted, new Set(['gemma3', 'qwen3']))
     controller.complete([
-      { id: 'gemma3', vision: true },
+      { id: 'gemma3', name: 'Gemma 3', vision: true },
       { id: 'qwen3', thinking: true },
     ])
     renderPicker(controller)
 
+    expect(screen.getByText('Gemma 3 (gemma3)')).not.toBeNull()
+    expect(screen.getByText('qwen3')).not.toBeNull()
     const dialog = screen.getByRole('dialog', { name: en.pickerTitle })
     expect(dialog.parentElement?.parentElement).toBe(document.body)
     const choices = screen.getAllByRole<HTMLInputElement>('checkbox')
@@ -43,7 +45,7 @@ describe('OpenCodeGoModelPicker', () => {
     fireEvent.click(choices[1] as HTMLInputElement)
     fireEvent.click(screen.getByRole('button', { name: en.applySelected }))
 
-    expect(adopted).toHaveBeenCalledWith([{ id: 'gemma3', vision: true }])
+    expect(adopted).toHaveBeenCalledWith([{ id: 'gemma3', name: 'Gemma 3', vision: true }])
     expect(screen.queryByRole('dialog', { name: en.pickerTitle })).toBeNull()
   })
 
@@ -59,6 +61,37 @@ describe('OpenCodeGoModelPicker', () => {
 
     expect(adopted).toHaveBeenCalledWith([])
   })
+  it('selects every live model when the catalog is empty', () => {
+    const controller = new OpenCodeGoModelPickerController()
+    const adopted = vi.fn()
+    controller.begin(adopted)
+    controller.complete([{ id: 'keep' }, { id: 'brand-new', name: 'Brand New' }])
+    renderPicker(controller)
+
+    expect(screen.getAllByRole<HTMLInputElement>('checkbox').map(choice => choice.checked)).toEqual([true, true])
+    fireEvent.click(screen.getByRole('button', { name: en.applySelected }))
+    expect(adopted).toHaveBeenCalledWith([
+      { id: 'keep' },
+      { id: 'brand-new', name: 'Brand New' },
+    ])
+  })
+
+  it('lists models missing from the current catalog first', () => {
+    const controller = new OpenCodeGoModelPickerController()
+    controller.begin(vi.fn(), new Set(['keep']))
+    controller.complete([
+      { id: 'keep', name: 'Keep' },
+      { id: 'brand-new', name: 'Brand New' },
+    ])
+    renderPicker(controller)
+
+    expect(screen.getAllByRole('checkbox').map(choice => choice.parentElement?.textContent)).toEqual([
+      'Brand New (brand-new)',
+      'Keep (keep)',
+    ])
+    expect(screen.getAllByRole<HTMLInputElement>('checkbox').map(choice => choice.checked)).toEqual([false, true])
+  })
+
   it('matches the current model selection when discovery completes', () => {
     const controller = new OpenCodeGoModelPickerController()
     controller.begin(vi.fn(), new Set(['qwen3']))

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+## [0.1.21] - 2026-09-10
+
+- Register OpenCode Go with the shared Provider Directory usage reader (same path as Antigravity) so quota is cached and shown in the task panel. Paint remaining quota from a local cache on first open, then refresh in the background. Saving no longer blanks the meter.
+- Adopt Approved A provider chrome (LLM badge, weekly remaining meter) and inner Connection/quota copy to match Command Code: remaining meters, replace-key placeholder, official endpoint hint.
+- Fetch refreshes the models.dev overlay when GET /models returns an id the 24h cache does not know, so new Go models are not stuck as blank rows until tomorrow.
+- Empty catalogs select the full live list; models missing from the current catalog sort to the top of the picker as `Name (id)`.
+- Document `deepseek-flash` as DeepSeek V4.1 Flash for the offline snapshot fallback.
+- Advertise official Grok 4.6 reasoning (`low` / `medium` / `high` / `xhigh`); 4.5 stays three levels.
+- Stop filling undocumented families with Codex five-level `max`. GLM-5 / LongCat are thinking on/off; Qwen 3.5–3.7 are hybrid on/off; Qwen 3.8 stays `low` / `medium` / `xhigh`; MiMo including Pro stays `low` / `medium` / `xhigh`; Hy3 stays three levels; MiniMax M3 is on/off.
+
 ## [0.1.20] - 2026-09-04
 
 - fix: publish the accepted settings revision after save so a second Save does not hit a stale fence.

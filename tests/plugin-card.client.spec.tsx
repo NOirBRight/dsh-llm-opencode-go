@@ -6,9 +6,13 @@ import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
+import { clearOpenCodeGoUsageCacheForTests } from '../src/client/usage-reader.ts'
 import type { OpenCodeGoCatalogModelConfig, OpenCodeGoSettingsView } from '../src/client-contract.ts'
 
-afterEach(() => { cleanup() })
+afterEach(() => {
+  cleanup()
+  clearOpenCodeGoUsageCacheForTests()
+})
 
 const settings: OpenCodeGoSettingsView = {
   apiKeyEnv: 'OPENCODE_GO_API_KEY',
@@ -66,6 +70,36 @@ describe('OpenCodeGoPluginCard', () => {
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
     expect(screen.getByRole('status').textContent).toBe(en.remoteAccess)
+  })
+
+  it('paints cached weekly remaining before the usage RPC returns', async () => {
+    const { persistOpenCodeGoUsage } = await import('../src/client/usage-reader.ts')
+    persistOpenCodeGoUsage({ fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } })
+    let resolveRead: ((value: { kind: 'ok', usage: { fetchedAt: string, weekly: { usage: number, models: never[] } } }) => void) | undefined
+    const fetchUsage = vi.fn(() => new Promise<{ kind: 'ok', usage: { fetchedAt: string, weekly: { usage: number, models: never[] } } }>((resolve) => {
+      resolveRead = resolve
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+    expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
+    resolveRead?.({ kind: 'ok', usage: { fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } } })
+    await waitFor(() => { expect(fetchUsage).toHaveBeenCalled() })
+  })
+
+  it('fetches usage while collapsed once a key is stored', async () => {
+    const fetchUsage = vi.fn(() => Promise.resolve({
+      kind: 'ok' as const,
+      usage: { fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } },
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+
+    await waitFor(() => { expect(fetchUsage).toHaveBeenCalled() })
+    expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
   })
 
   it('does not fetch usage until a key is stored', () => {
@@ -261,6 +295,7 @@ describe('OpenCodeGoPluginCard', () => {
         },
         weekly: {
           usage: 0.891,
+          resetsAt: '2099-09-14T00:00:00.000Z',
           models: [
             { name: 'glm-5.2', requestCount: 4133 },
             { name: 'web search', requestCount: 264 },
@@ -275,17 +310,18 @@ describe('OpenCodeGoPluginCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 89.1%`)).toBeTruthy() })
-    expect(screen.getByText(`${en.usageUsed} 18.8%`)).toBeTruthy()
+    await waitFor(() => { expect(screen.getAllByText('10.9%').length).toBeGreaterThan(0) })
+    expect(screen.getByText('LLM')).toBeTruthy()
+    expect(screen.getAllByRole('meter', { name: en.usageWeekly })[0]?.getAttribute('aria-valuenow')).toBe('10.9')
+    expect(screen.getByText('81.2%')).toBeTruthy()
+    expect(screen.queryByText(/重置/u)).toBeNull()
+    expect(screen.getAllByText(/Usage limits reset on/u).length).toBeGreaterThan(0)
     expect(screen.getByText(en.usageModels)).toBeTruthy()
     expect(screen.getByText('glm-5.2')).toBeTruthy()
     expect(screen.getByText(`4133 ${en.usageRequests}`)).toBeTruthy()
     expect(screen.getByText(`264 ${en.usageRequests}`)).toBeTruthy()
     expect(fetchUsage).toHaveBeenCalledWith({ baseURL: 'https://opencode.ai/zen/go/v1' })
-    expect(screen.getByRole('progressbar', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('89')
-
     expect(screen.queryByRole('tooltip')).toBeNull()
-    expect(screen.getByRole('progressbar', { name: en.usageSession }).querySelectorAll('[data-usage-segment]')).toHaveLength(0)
 
     const details = screen.getByRole('list', { name: en.usageModels })
     expect(details.style.maxHeight).toBe('')
@@ -318,7 +354,7 @@ describe('OpenCodeGoPluginCard', () => {
 
     await waitFor(() => { expect(screen.getByText(en.usageUnreachable)).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 10%`)).toBeTruthy() })
+    await waitFor(() => { expect(screen.getAllByText('90%').length).toBeGreaterThan(0) })
     expect(fetchUsage).toHaveBeenCalledTimes(2)
   })
 
