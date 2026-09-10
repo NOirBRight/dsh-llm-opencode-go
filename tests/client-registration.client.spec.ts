@@ -11,7 +11,7 @@ import {
 import { apply, inject } from '../src/client/index.ts'
 import type { OpenCodeGoPluginCardFace } from '../src/client/OpenCodeGoPluginCard.tsx'
 
-afterEach(() => { vi.restoreAllMocks() })
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
 
 const value: OpenCodeGoSettingsView = {
   apiKeyEnv: 'OPENCODE_GO_API_KEY',
@@ -130,25 +130,51 @@ describe('OpenCode Go client plugin registration', () => {
     await ctx.fiber.dispose()
   })
 
-  it('warns only when the provider page owner is absent', async () => {
+  // The owner registers the providers section after the settings snapshot arrives and
+  // the page becomes visible, so the diagnostic waits out a grace period before warning.
+  const missingOwnerWarnings = (warning: ReturnType<typeof vi.spyOn>): number =>
+    warning.mock.calls.filter(([message]) => String(message).includes('LLM Providers page missing')).length
+
+  it('warns once when the provider page owner is still absent after the grace period', async () => {
+    vi.useFakeTimers()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { ctx } = await bench()
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    await new Promise<void>(resolve => setTimeout(resolve, 0))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(missingOwnerWarnings(warning)).toBe(0)
+    await vi.advanceTimersByTimeAsync(15_000)
     expect(warning).toHaveBeenCalledWith(expect.stringContaining('LLM Providers page missing'))
+    expect(missingOwnerWarnings(warning)).toBe(1)
+    await fiber.dispose()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(missingOwnerWarnings(warning)).toBe(1)
+    await ctx.fiber.dispose()
+  })
+
+  it('does not warn when the provider page owner registers inside the grace period', async () => {
+    vi.useFakeTimers()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { ctx, slots } = await bench()
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const removeOwner = slots.register({ name: 'settings.section', id: 'providers' }, undefined)
+    removeOwner()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(missingOwnerWarnings(warning)).toBe(0)
     await fiber.dispose()
     await ctx.fiber.dispose()
   })
 
   it('does not warn when the provider page owner is already registered', async () => {
+    vi.useFakeTimers()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { ctx, slots } = await bench()
     const removeOwner = slots.register({ name: 'settings.section', id: 'providers' }, undefined)
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    await new Promise<void>(resolve => setTimeout(resolve, 0))
-    expect(warning).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(missingOwnerWarnings(warning)).toBe(0)
     await fiber.dispose()
     removeOwner()
     await ctx.fiber.dispose()

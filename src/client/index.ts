@@ -60,6 +60,9 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
+/** Grace period for dsh-llm-providers-ui to register the providers settings section before the missing-owner warning fires. */
+const MISSING_OWNER_GRACE_MS = 15_000
+
 /** Stable browser-plugin name. */
 export const name = 'dsh-llm-opencode-go-client'
 /** Client services required by the Plugin configuration contribution. */
@@ -225,8 +228,15 @@ export function apply(ctx: ClientContext): void {
       warned = true
       console.warn('[dsh-llm-providers-ui] LLM Providers page missing for card llm-opencode-go: install dsh-llm-providers-ui to show the card. Host route remains active.')
     }
-    const timer = setTimeout(check, 0)
-    const stop = ctx.slots.subscribe('settings.section', check)
+    // The owner registers the providers section only after the settings snapshot
+    // arrives and the page becomes visible, so an immediate check always runs
+    // ahead of it: grant a grace period and cancel the warning on registration.
+    const timer = setTimeout(check, MISSING_OWNER_GRACE_MS)
+    const stop = ctx.slots.subscribe('settings.section', () => {
+      if (!ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers')) return
+      clearTimeout(timer)
+      warned = true
+    })
     return () => {
       clearTimeout(timer)
       stop()
