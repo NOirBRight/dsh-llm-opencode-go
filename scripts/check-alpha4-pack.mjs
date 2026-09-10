@@ -14,6 +14,7 @@ const FIXTURE_ROOT = join(ROOT, 'fixtures', 'alpha4')
 const TARBALL_ROOT = join(FIXTURE_ROOT, 'tarballs')
 const ALPHA4 = '0.1.2-alpha.4'
 const RC1 = '0.1.2-rc.1'
+const RC15 = '0.1.5-rc.1'
 const CORDIS = '4.0.2'
 const CORDIS_RANGE = '>=4.0.2 <5.0.0'
 const OFFICIAL_TAG = 'dsh-v0.1.2-alpha.4'
@@ -127,7 +128,9 @@ function checkAlpha4Manifest(manifest, label) {
   for (const section of ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']) {
     for (const [name, range] of Object.entries(manifest[section] ?? {})) {
       if (typeof range !== 'string') fail(label + ' has non-string ' + section + '.' + name)
-      if (name.startsWith('@deepseek-ai/dsh-') && range !== ALPHA4 && !(satisfies(ALPHA4, range) && satisfies(RC1, range)) && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has a DSH range that excludes Alpha.4 or rc.1: ' + name + ' ' + range)
+      // devDependencies never ship (npm pack drops them from the installed closure), so an exact pin of the verified 0.1.5-rc.1 target plane is accepted there; runtime sections keep the Alpha.4/rc.1 rule.
+      const devTargetPin = section === 'devDependencies' && range === RC15
+      if (!devTargetPin && name.startsWith('@deepseek-ai/dsh-') && range !== ALPHA4 && !(satisfies(ALPHA4, range) && satisfies(RC1, range)) && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has a DSH range that excludes Alpha.4 or rc.1: ' + name + ' ' + range)
       // Cordis plugins published from the upstream monorepo retain their
       // workspace peer range; the harness packages and this plugin must pin
       // the runtime Cordis version itself.

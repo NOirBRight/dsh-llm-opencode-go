@@ -33,6 +33,16 @@ describe('OpenCode Go pi-ai profile', () => {
   })
 })
 
+describe('OpenCode Go modelErrors', () => {
+  it('exposes an empty modelErrors map for the host modelOf path', () => {
+    const profile = createOpenCodeGoPiAiProfile(connection([{ id: 'glm-5.3', contextWindow: 1_000_000 }]))
+    // Mirrors PiAiAdapter.modelOf: unconditional profile.modelErrors.get(model).
+    expect(profile.modelErrors).toBeInstanceOf(Map)
+    expect(profile.modelErrors.size).toBe(0)
+    expect(profile.modelErrors.get('glm-5.3')).toBeUndefined()
+  })
+})
+
 describe('OpenCodeGoAdapter image pricing', () => {
   it('declares neutral imageRequestPricing for alpha hosts', () => {
     expect(Object.hasOwn(OpenCodeGoAdapter.prototype, 'imageRequestPricing')).toBe(true)

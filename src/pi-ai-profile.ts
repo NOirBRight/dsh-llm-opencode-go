@@ -143,7 +143,8 @@ export function createOpenCodeGoPiAiProfile(
     headers: openCodeGoProfileHeaders(),
     piProvider,
     configuredMaxTokens,
-  } as ResolvedPiAiProviderProfile
+    modelErrors: new Map(),
+  }
 }
 
 export type { Api }
