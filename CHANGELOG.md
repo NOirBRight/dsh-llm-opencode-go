@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## [0.1.21] - 2026-09-10
+## [0.1.23] - 2026-09-10
 
 - Register OpenCode Go with the shared Provider Directory usage reader (same path as Antigravity) so quota is cached and shown in the task panel. Paint remaining quota from a local cache on first open, then refresh in the background. Saving no longer blanks the meter.
 - Adopt Approved A provider chrome (LLM badge, weekly remaining meter) and inner Connection/quota copy to match Command Code: remaining meters, replace-key placeholder, official endpoint hint.
