@@ -8,7 +8,7 @@ import {
   OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
 } from '../src/client-contract.ts'
-import { apply, inject } from '../src/client/index.ts'
+import { apply, inject, MISSING_OWNER_GRACE_MS } from '../src/client/index.ts'
 import type { OpenCodeGoPluginCardFace } from '../src/client/OpenCodeGoPluginCard.tsx'
 
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
@@ -143,11 +143,12 @@ describe('OpenCode Go client plugin registration', () => {
     await fiber.await()
     await vi.advanceTimersByTimeAsync(0)
     expect(missingOwnerWarnings(warning)).toBe(0)
-    await vi.advanceTimersByTimeAsync(15_000)
+    await vi.advanceTimersByTimeAsync(MISSING_OWNER_GRACE_MS)
     expect(warning).toHaveBeenCalledWith(expect.stringContaining('LLM Providers page missing'))
     expect(missingOwnerWarnings(warning)).toBe(1)
     await fiber.dispose()
-    await vi.advanceTimersByTimeAsync(60_000)
+    // Well past the grace window; disposer must keep the warning single-shot.
+    await vi.advanceTimersByTimeAsync(MISSING_OWNER_GRACE_MS * 4)
     expect(missingOwnerWarnings(warning)).toBe(1)
     await ctx.fiber.dispose()
   })
@@ -160,7 +161,7 @@ describe('OpenCode Go client plugin registration', () => {
     await fiber.await()
     const removeOwner = slots.register({ name: 'settings.section', id: 'providers' }, undefined)
     removeOwner()
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(MISSING_OWNER_GRACE_MS * 4)
     expect(missingOwnerWarnings(warning)).toBe(0)
     await fiber.dispose()
     await ctx.fiber.dispose()
@@ -173,7 +174,7 @@ describe('OpenCode Go client plugin registration', () => {
     const removeOwner = slots.register({ name: 'settings.section', id: 'providers' }, undefined)
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(MISSING_OWNER_GRACE_MS * 4)
     expect(missingOwnerWarnings(warning)).toBe(0)
     await fiber.dispose()
     removeOwner()

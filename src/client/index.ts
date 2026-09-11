@@ -61,7 +61,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 }
 
 /** Grace period for dsh-llm-providers-ui to register the providers settings section before the missing-owner warning fires. */
-const MISSING_OWNER_GRACE_MS = 15_000
+export const MISSING_OWNER_GRACE_MS = 15_000
 
 /** Stable browser-plugin name. */
 export const name = 'dsh-llm-opencode-go-client'
