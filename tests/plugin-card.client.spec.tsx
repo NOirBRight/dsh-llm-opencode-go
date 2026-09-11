@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import { providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
@@ -435,5 +436,43 @@ describe('OpenCodeGoPluginCard', () => {
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
       models: [expect.objectContaining({ id: 'omen', contextWindow: 1_000_000 })],
     }), undefined)
+  })
+  it('renders the shared detail template when the settings page asks for it', () => {
+    const onRefresh = vi.fn()
+    const usage = {
+      status: 'ready' as const,
+      fetchedAt: '2026-09-12T00:00:00.000Z',
+      windows: [
+        { id: 'session', label: 'Session', shortLabel: 'S', remainingPercent: 98, valueText: '98%' },
+        { id: 'weekly', label: 'Week', shortLabel: 'W', remainingPercent: 68, valueText: '68%' },
+      ],
+    }
+    const withModels = {
+      ...settings,
+      models: [
+        { id: 'alpha', contextWindow: 200_000 },
+        { id: 'beta', contextWindow: 200_000 },
+      ],
+    }
+    const current = snapshot({ value: withModels, base: withModels, user: {} })
+    const { container } = render(<OpenCodeGoPluginCard {...props({
+      useOpenCodeGoSettings: selector => selector(current),
+      mode: 'detail',
+      usage,
+      accountState: 'configured',
+      onRefresh,
+      copy: providerDetailCopy.en,
+    })} />)
+
+    expect(container.querySelector('[data-provider-detail]')).not.toBeNull()
+    expect(container.querySelector('[data-c-quota]')).not.toBeNull()
+    // Both windows survive: the detail is not limited to the headline window.
+    expect(container.textContent).toContain('98%')
+    expect(container.textContent).toContain('68%')
+    expect(container.textContent).toContain('2 models')
+    expect(container.querySelector('[data-provider-models] .c-count')?.textContent).toBe('2')
+    // The plugin's own usage section is gone; only the shared quota block remains.
+    expect(container.querySelector('[aria-label="' + en.usage + '"]')).toBeNull()
+    expect(container.querySelectorAll('[data-c-quota]')).toHaveLength(1)
   })
 })

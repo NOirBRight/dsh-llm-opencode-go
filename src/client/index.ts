@@ -45,9 +45,15 @@ declare module '@deepseek-ai/cordis' {
     providerDirectory?: {
       register(declaration: {
         key: string
+        /** Display name for the overview and detail title. */
+        name?: string
         role?: 'llm' | 'agent'
         header?: 'shared' | 'legacy'
+        /** Who renders the expanded detail: the shared template, or the legacy card. */
+        detail?: 'shared' | 'legacy'
         usage?: ReturnType<typeof createOpenCodeGoUsageReader>
+        /** Active model count for the overview subline. */
+        modelCount?: () => number | undefined
       }): () => void
       invalidateUsage(key: string): void
     }
@@ -208,15 +214,19 @@ export function apply(ctx: ClientContext): void {
       closeModelPicker: picker.close,
     }),
   }, OpenCodeGoPluginCard))
-  ctx.inject(['providerDirectory'], (scope) => {
-    const directory = scope.providerDirectory
+  ctx.inject(['providerDirectory'], (directoryScope) => {
+    const directory = directoryScope.providerDirectory
     if (directory === undefined) return
-    scope.effect(
+    directoryScope.effect(
       () => directory.register({
         key: OPENCODE_GO_SETTINGS_NAMESPACE,
+        name: 'OpenCode Go',
         role: 'llm',
         header: 'shared',
+        // The card renders the shared detail template; the settings page adds only the breadcrumb.
+        detail: 'shared',
         usage: createOpenCodeGoUsageReader(),
+        modelCount: () => scope.getSnapshot().value?.models.length,
       }),
       'dsh-llm-opencode-go: provider directory',
     )

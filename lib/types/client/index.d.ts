@@ -15,9 +15,15 @@ declare module '@deepseek-ai/cordis' {
         providerDirectory?: {
             register(declaration: {
                 key: string;
+                /** Display name for the overview and detail title. */
+                name?: string;
                 role?: 'llm' | 'agent';
                 header?: 'shared' | 'legacy';
+                /** Who renders the expanded detail: the shared template, or the legacy card. */
+                detail?: 'shared' | 'legacy';
                 usage?: ReturnType<typeof createOpenCodeGoUsageReader>;
+                /** Active model count for the overview subline. */
+                modelCount?: () => number | undefined;
             }): () => void;
             invalidateUsage(key: string): void;
         };
