@@ -383,7 +383,9 @@ describe('OpenCodeGoPluginCard', () => {
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
     fireEvent.click(screen.getByRole('button', { name: en.models }))
 
-    const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-model-row]'))
+    const listRows = (): HTMLElement[] => Array.from(container.querySelectorAll<HTMLElement>('[data-model-row]'))
+      .filter(row => row.closest('[data-sortable-ghost]') === null)
+    const rows = listRows()
     for (const [index, row] of rows.entries()) {
       const sortable = row.closest<HTMLElement>('[data-sortable-row]') ?? row
       vi.spyOn(sortable, 'getBoundingClientRect').mockReturnValue({
@@ -399,12 +401,20 @@ describe('OpenCodeGoPluginCard', () => {
 
     // The preview order changes before release: sibling cards move out of the
     // way while a floating ghost follows the pointer.
-    expect(Array.from(container.querySelectorAll('[data-model-row]')).map(row => row.getAttribute('data-model-row'))).toEqual([
+    expect(listRows().map(row => row.getAttribute('data-model-row'))).toEqual([
       'bravo', 'charlie', 'alpha',
     ])
     expect(document.querySelector('[data-sortable-ghost="true"]')).not.toBeNull()
 
     fireEvent.pointerUp(window, { pointerId: 1, clientX: 10, clientY: 140 })
+
+    // After release the preview order is the committed one and the floating
+    // ghost is gone, so it can never be mistaken for a list row again.
+    expect(listRows().map(row => row.getAttribute('data-model-row'))).toEqual([
+      'bravo', 'charlie', 'alpha',
+    ])
+    expect(document.querySelector('[data-sortable-ghost="true"]')).toBeNull()
+
     fireEvent.click(screen.getByRole('button', { name: en.save }))
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
