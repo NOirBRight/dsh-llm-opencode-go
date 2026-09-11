@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/* Portable Alpha.4 pack gate shared by the plugin migrations. */
+/* Dual-runtime pack gate: Alpha.4 fixture plus 0.1.5-rc.1 development pins. */
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -28,7 +28,7 @@ const PACKAGE_MANAGER_KEYS = new Set([
 ])
 const INHERITED_KEYS = new Set(['PATH', 'HOME', 'USER', 'LANG', 'TMP', 'TMPDIR', 'TEMP', 'CI', 'SystemRoot', 'WINDIR', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'COMSPEC', 'ComSpec', 'PATHEXT'])
 
-function fail(message) { throw new Error('Alpha.4 pack gate: ' + message) }
+function fail(message) { throw new Error('0.1.5-rc.1 pack gate: ' + message) }
 function readJson(file) {
   try { return JSON.parse(readFileSync(file, 'utf8')) }
   catch (error) { fail('invalid JSON in ' + file + ': ' + String(error)) }
@@ -244,7 +244,7 @@ try {
   if ([...packedFiles].some(value => /^(?:src|tests|scripts|fixtures|node_modules)\//u.test(value))) fail('packed artifact contains source, tests, scripts, fixtures, or node_modules')
   const installed = installOffline(archive, fixture)
   smoke(installed.consumer, root)
-  console.log('Dual-runtime pack check passed: Alpha.4 fixture provenance, forward-compatible DSH ranges, fresh offline install, and public exports')
+  console.log('Dual-runtime pack check passed: 0.1.5-rc.1 development pins, Alpha.4 fixture provenance, forward-compatible DSH ranges, fresh offline install, and public exports')
 } finally {
   if (typeof workRoot === 'string') rmSync(workRoot, { recursive: true, force: true })
 }

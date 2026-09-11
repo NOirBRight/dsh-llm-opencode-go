@@ -8,7 +8,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ## 兼容性
 
-已验证运行时是 DeepSeek Harness `0.1.2-alpha.4` 与 `0.1.2-rc.1`（Cordis `4.0.2`）；这份记录只是证据，不是 allowlist。
+已验证运行时是 DeepSeek Harness `0.1.5-rc.1`（当前）以及历史上的 `0.1.2-alpha.4` / `0.1.2-rc.1`（Cordis `4.0.2`）；这份记录只是证据，不是 allowlist。
 
 未知的新版本会先打一条 warning，再按正常挂载路径 best-effort 尝试，不会因为未验证而跳过。
 

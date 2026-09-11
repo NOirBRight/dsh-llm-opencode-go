@@ -8,7 +8,10 @@ import {
   OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
 } from '../src/client-contract.ts'
-import { apply, inject, MISSING_OWNER_GRACE_MS } from '../src/client/index.ts'
+import { apply, inject } from '../src/client/index.ts'
+
+// 15_000 ms is MISSING_OWNER_GRACE_MS in src/client/index.ts, which stays module-private.
+const MISSING_OWNER_GRACE_MS = 15_000
 import type { OpenCodeGoPluginCardFace } from '../src/client/OpenCodeGoPluginCard.tsx'
 
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
