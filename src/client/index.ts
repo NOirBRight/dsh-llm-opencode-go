@@ -223,8 +223,10 @@ export function apply(ctx: ClientContext): void {
   })
   ctx.effect(() => {
     let warned = false
+    const hasProvidersSection = (): boolean =>
+      ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers')
     const check = (): void => {
-      if (ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers') || warned) return
+      if (hasProvidersSection() || warned) return
       warned = true
       console.warn('[dsh-llm-providers-ui] LLM Providers page missing for card llm-opencode-go: install dsh-llm-providers-ui to show the card. Host route remains active.')
     }
@@ -233,7 +235,7 @@ export function apply(ctx: ClientContext): void {
     // ahead of it: grant a grace period and cancel the warning on registration.
     const timer = setTimeout(check, MISSING_OWNER_GRACE_MS)
     const stop = ctx.slots.subscribe('settings.section', () => {
-      if (!ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers')) return
+      if (!hasProvidersSection()) return
       clearTimeout(timer)
       warned = true
     })
