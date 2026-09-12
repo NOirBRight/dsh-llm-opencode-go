@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import { providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
+import { ProviderDetail, providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
@@ -462,6 +462,7 @@ describe('OpenCodeGoPluginCard', () => {
       accountState: 'configured',
       onRefresh,
       copy: providerDetailCopy.en,
+      template: ProviderDetail,
     })} />)
 
     expect(container.querySelector('[data-provider-detail]')).not.toBeNull()

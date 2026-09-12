@@ -20,7 +20,7 @@ import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyl
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
 import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
-import { ProviderDetail, providerDetailCopy, type ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
+import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
 import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
@@ -832,14 +832,16 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
 
   // Prototype C detail: the shared template owns the layout, this card owns OpenCode Go's data.
-  if (props.mode === 'detail' && draft !== undefined) {
+  const SharedDetail = props.template
+  const detailCopy = props.copy
+  if (props.mode === 'detail' && SharedDetail !== undefined && detailCopy !== undefined && draft !== undefined) {
     const configured = credential?.configured === true
     return (
       <li style={cardStyle} data-provider-card="" data-provider-role="llm">
-        <ProviderDetail
+        <SharedDetail
           name={title}
           role="llm"
-          copy={props.copy ?? providerDetailCopy.en}
+          copy={detailCopy}
           notice={t('description')}
           account={{
             state: configured ? 'configured' : 'unconnected',

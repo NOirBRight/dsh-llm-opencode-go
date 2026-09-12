@@ -4,7 +4,7 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { OpenCodeGoCatalogModelConfig, OpenCodeGoDiscoveryRequest, OpenCodeGoSaveResult, OpenCodeGoSettingsView, OpenCodeGoUsageView } from '../client-contract.ts';
 import type { OpenCodeGoSettingsKey } from './locales.ts';
-import { type ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail';
+import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail';
 /** Credential state exposed without returning the credential value. */
 export interface OpenCodeGoCredentialState {
     /** Whether any Host credential layer supplies the reference. */
