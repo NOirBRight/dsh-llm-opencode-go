@@ -25,8 +25,8 @@ This follows the Ollama plugin split: the plugin does not own a private SSE tran
 
 ## Endpoint mapping
 
-The settings section stores `https://opencode.ai/zen/go/v1`. Chat, listing, and usage all use that origin.
+The settings section stores `https://opencode.ai/zen/go/v1`. Chat, listing, and usage all use that origin. Every request includes `x-opencode-session` (DSH session id on chat; stable ids on listing and usage).
 
 ## Model catalog
 
-`GET /models` currently returns OpenAI-shaped ids without `context_length`. The plugin copies live fields when present, then fills documented name, context, vision, thinking, and protocol from a local table. Unknown ids are listed without inventing a context window.
+`GET /models` currently returns OpenAI-shaped ids without `context_length`. The plugin copies live listing fields when present, fills a local snapshot, then overlays [models.dev](https://models.dev) `opencode-go.models`. A context window is omitted when the listing, the overlay, and the snapshot all omit one.

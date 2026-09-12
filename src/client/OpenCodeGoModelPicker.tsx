@@ -51,15 +51,20 @@ export class OpenCodeGoModelPickerController {
     this.publish({ open: true, loading: true, candidates: [], picked: new Set(initiallyPicked) })
   }
 
-  /** Populate an open loading picker, retaining only current ids present in the result. */
+  /** Populate an open loading picker, retaining current ids; empty catalogs adopt the live list. */
   complete(candidates: readonly OpenCodeGoCatalogModelConfig[]): void {
     if (!this.snapshot.open || !this.snapshot.loading) return
     const candidateIds = new Set(candidates.map(model => model.id))
+    const current = this.snapshot.picked
+    const kept = [...current].filter(id => candidateIds.has(id))
+    const picked = current.size === 0 ? new Set(candidateIds) : new Set(kept)
+    const fresh = candidates.filter(model => !current.has(model.id))
+    const rest = candidates.filter(model => current.has(model.id))
     this.publish({
       open: true,
       loading: false,
-      candidates: [...candidates],
-      picked: new Set([...this.snapshot.picked].filter(id => candidateIds.has(id))),
+      candidates: [...fresh, ...rest],
+      picked,
     })
   }
 
@@ -267,7 +272,7 @@ export function OpenCodeGoModelPicker(props: OpenCodeGoModelPickerProps): ReactN
                         checked={snapshot.picked.has(model.id)}
                         onChange={() => { props.togglePickerModel(model.id) }}
                       />
-                      <span>{model.id}</span>
+                      <span>{model.name && model.name !== model.id ? model.name + ' (' + model.id + ')' : (model.name ?? model.id)}</span>
                     </label>
                   </li>
                 ))}

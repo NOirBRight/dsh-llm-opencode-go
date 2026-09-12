@@ -14,6 +14,7 @@ import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
 import type { SettingsPathOp } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { allowDshRuntime } from './compatibility.ts'
 import {
   DEFAULT_CONTEXT_WINDOW,
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
@@ -118,6 +119,7 @@ const catalogModel: z<OpenCodeGoCatalogModel> = z.object({
   vision: z.boolean(),
   thinking: z.boolean(),
   defaultEffort: z.string(),
+  thinkingEfforts: z.array(z.string()),
   api: z.union(['openai-completions', 'openai-responses', 'anthropic-messages']),
   tools: z.boolean(),
 })
@@ -158,6 +160,7 @@ function resolveModels(models: readonly OpenCodeGoCatalogModel[] | undefined): O
       ...(model.vision === undefined ? {} : { vision: model.vision }),
       ...(model.thinking === undefined ? {} : { thinking: model.thinking }),
       ...(model.defaultEffort === undefined ? {} : { defaultEffort: model.defaultEffort }),
+      ...(model.thinkingEfforts === undefined ? {} : { thinkingEfforts: model.thinkingEfforts }),
       ...(model.api === undefined ? {} : { api: model.api }),
       ...(model.tools === undefined ? {} : { tools: model.tools }),
     }
@@ -220,6 +223,8 @@ function usageFailure(error: unknown) {
 }
 
 export function apply(ctx: Context, config: Config): void {
+  if (!allowDshRuntime(ctx.logger, 'dsh-llm-opencode-go', ['@deepseek-ai/dsh-llm'])) return
+
   if (Object.hasOwn(config, 'remoteManagement')) {
     throw new Error('llm-opencode-go: remoteManagement is unsupported by the Alpha.4 Host RPC; remove it from the plugin config')
   }

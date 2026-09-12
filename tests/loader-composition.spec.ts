@@ -75,6 +75,23 @@ describe('llm-opencode-go real composition', () => {
     const result = await assemble(ctx, { model: 'glm-5.3', messages: [] })
     expect(result.finish).toEqual({ kind: 'stop' })
     expect(server.headers[0]?.authorization).toBe('Bearer test-key')
+    expect(server.headers[0]?.['x-opencode-session']).toMatch(/^ses_/)
+  })
+
+  it('sends the DSH session id as x-opencode-session for Completions and Responses', async () => {
+    vi.stubEnv('OPENCODE_API_KEY', 'test-key')
+    const completions = await mockServer([{ kind: 'sse', events: openAITextEvents }])
+    const ctx = await loadComposition(completions.url)
+    await assemble(ctx, { model: 'glm-5.3', messages: [], sessionId: 'ses_glm-turn' as never })
+    expect(completions.headers[0]?.['x-opencode-session']).toBe('ses_glm-turn')
+  })
+
+  it('sends x-opencode-session on Responses models too', async () => {
+    vi.stubEnv('OPENCODE_API_KEY', 'test-key')
+    const responses = await mockServer([{ kind: 'sse', events: openAIResponsesTextEvents }])
+    const muse = await loadComposition(responses.url, 'muse-spark-1.3-contributor')
+    await assemble(muse, { model: 'muse-spark-1.3-contributor', messages: [], sessionId: 'ses_muse-turn' as never })
+    expect(responses.headers[0]?.['x-opencode-session']).toBe('ses_muse-turn')
   })
 
   it('fails with MISSING_CREDENTIAL when no key is available', async () => {

@@ -21,10 +21,16 @@ export declare function knownModel(id: string): OpenCodeGoKnownModel | undefined
 export declare function protocolForModel(id: string): OpenCodeGoApi;
 /** Family used only by the picker overlay. */
 export declare function familyForModel(id: string): OpenCodeGoFamily;
-/** Merge live listing fields with documented capacities without inventing unknown windows. */
-export declare function enrichModel(id: string, listed: {
+export type OpenCodeGoListedModel = {
     name?: string;
+    description?: string;
     contextWindow?: number;
     maxTokens?: number;
-}): OpenCodeGoCatalogModelConfig;
+    vision?: boolean;
+    thinking?: boolean;
+    defaultEffort?: string;
+    thinkingEfforts?: string[];
+};
+/** Merge live listing, models.dev, then the local snapshot. Do not invent a window. */
+export declare function enrichModel(id: string, listed: OpenCodeGoListedModel, overlay?: OpenCodeGoListedModel): OpenCodeGoCatalogModelConfig;
 //# sourceMappingURL=catalog.d.ts.map

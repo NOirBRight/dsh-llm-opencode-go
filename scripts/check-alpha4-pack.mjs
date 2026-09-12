@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/* Portable Alpha.4 pack gate shared by the plugin migrations. */
+/* Dual-runtime pack gate: Alpha.4 fixture plus 0.1.5-rc.1 development pins. */
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -13,7 +13,10 @@ const ROOT = resolve(process.env.DSH_ALPHA4_PLUGIN_ROOT ?? fileURLToPath(new URL
 const FIXTURE_ROOT = join(ROOT, 'fixtures', 'alpha4')
 const TARBALL_ROOT = join(FIXTURE_ROOT, 'tarballs')
 const ALPHA4 = '0.1.2-alpha.4'
+const RC1 = '0.1.2-rc.1'
+const DSH_015_RC1 = '0.1.5-rc.1'
 const CORDIS = '4.0.2'
+const CORDIS_RANGE = '>=4.0.2 <5.0.0'
 const OFFICIAL_TAG = 'dsh-v0.1.2-alpha.4'
 const OFFICIAL_COMMIT = '4e84901e6471b79ec0338099867ebb4606d12bb5'
 const INVALID_REGISTRY = 'http://127.0.0.1:9'
@@ -25,7 +28,7 @@ const PACKAGE_MANAGER_KEYS = new Set([
 ])
 const INHERITED_KEYS = new Set(['PATH', 'HOME', 'USER', 'LANG', 'TMP', 'TMPDIR', 'TEMP', 'CI', 'SystemRoot', 'WINDIR', 'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'COMSPEC', 'ComSpec', 'PATHEXT'])
 
-function fail(message) { throw new Error('Alpha.4 pack gate: ' + message) }
+function fail(message) { throw new Error('0.1.5-rc.1 pack gate: ' + message) }
 function readJson(file) {
   try { return JSON.parse(readFileSync(file, 'utf8')) }
   catch (error) { fail('invalid JSON in ' + file + ': ' + String(error)) }
@@ -125,11 +128,13 @@ function checkAlpha4Manifest(manifest, label) {
   for (const section of ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies']) {
     for (const [name, range] of Object.entries(manifest[section] ?? {})) {
       if (typeof range !== 'string') fail(label + ' has non-string ' + section + '.' + name)
-      if (name.startsWith('@deepseek-ai/dsh-') && range !== ALPHA4 && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has non-Alpha.4 DSH dependency ' + name + ' ' + range)
+      // devDependencies never ship (npm pack drops them from the installed closure), so an exact pin of the verified 0.1.5-rc.1 target plane is accepted there; runtime sections keep the Alpha.4 / 0.1.2-rc.1 / 0.1.5-rc.1 rule.
+      const devTargetPin = section === 'devDependencies' && range === DSH_015_RC1
+      if (!devTargetPin && name.startsWith('@deepseek-ai/dsh-') && range !== ALPHA4 && !(satisfies(ALPHA4, range) && satisfies(RC1, range)) && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has a DSH range that excludes Alpha.4, 0.1.2-rc.1, or 0.1.5-rc.1: ' + name + ' ' + range)
       // Cordis plugins published from the upstream monorepo retain their
       // workspace peer range; the harness packages and this plugin must pin
       // the runtime Cordis version itself.
-      if (name === '@deepseek-ai/cordis' && !manifest.name.startsWith('@deepseek-ai/cordis-') && range !== CORDIS && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has non-4.0.2 Cordis dependency ' + range)
+      if (name === '@deepseek-ai/cordis' && !manifest.name.startsWith('@deepseek-ai/cordis-') && range !== CORDIS && range !== CORDIS_RANGE && !(capturedOfficialWorkspace && range === 'workspace:^')) fail(label + ' has an unsupported Cordis range ' + range)
       if (/(?:alpha\.1|alpha\.2|alpha\.3|dsh-v0\.1\.2-alpha\.[123])/iu.test(range)) fail(label + ' contains an old Alpha dependency: ' + name + ' ' + range)
     }
   }
@@ -239,7 +244,7 @@ try {
   if ([...packedFiles].some(value => /^(?:src|tests|scripts|fixtures|node_modules)\//u.test(value))) fail('packed artifact contains source, tests, scripts, fixtures, or node_modules')
   const installed = installOffline(archive, fixture)
   smoke(installed.consumer, root)
-  console.log('Alpha.4 pack check passed: fixture provenance, exact DSH/Cordis versions, fresh offline install, and public exports')
+  console.log('Dual-runtime pack check passed: 0.1.5-rc.1 development pins, Alpha.4 fixture provenance, forward-compatible DSH ranges, fresh offline install, and public exports')
 } finally {
   if (typeof workRoot === 'string') rmSync(workRoot, { recursive: true, force: true })
 }

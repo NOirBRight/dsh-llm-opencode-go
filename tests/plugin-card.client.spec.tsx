@@ -3,12 +3,17 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import { ProviderDetail, providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
 import { en } from '../src/client/locales.ts'
+import { clearOpenCodeGoUsageCacheForTests } from '../src/client/usage-reader.ts'
 import type { OpenCodeGoCatalogModelConfig, OpenCodeGoSettingsView } from '../src/client-contract.ts'
 
-afterEach(() => { cleanup() })
+afterEach(() => {
+  cleanup()
+  clearOpenCodeGoUsageCacheForTests()
+})
 
 const settings: OpenCodeGoSettingsView = {
   apiKeyEnv: 'OPENCODE_GO_API_KEY',
@@ -66,6 +71,36 @@ describe('OpenCodeGoPluginCard', () => {
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
     expect(screen.getByRole('status').textContent).toBe(en.remoteAccess)
+  })
+
+  it('paints cached weekly remaining before the usage RPC returns', async () => {
+    const { persistOpenCodeGoUsage } = await import('../src/client/usage-reader.ts')
+    persistOpenCodeGoUsage({ fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } })
+    let resolveRead: ((value: { kind: 'ok', usage: { fetchedAt: string, weekly: { usage: number, models: never[] } } }) => void) | undefined
+    const fetchUsage = vi.fn(() => new Promise<{ kind: 'ok', usage: { fetchedAt: string, weekly: { usage: number, models: never[] } } }>((resolve) => {
+      resolveRead = resolve
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+    expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
+    resolveRead?.({ kind: 'ok', usage: { fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } } })
+    await waitFor(() => { expect(fetchUsage).toHaveBeenCalled() })
+  })
+
+  it('fetches usage while collapsed once a key is stored', async () => {
+    const fetchUsage = vi.fn(() => Promise.resolve({
+      kind: 'ok' as const,
+      usage: { fetchedAt: '2026-08-16T00:00:00.000Z', weekly: { usage: 0.18, models: [] } },
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+
+    await waitFor(() => { expect(fetchUsage).toHaveBeenCalled() })
+    expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
   })
 
   it('does not fetch usage until a key is stored', () => {
@@ -261,6 +296,7 @@ describe('OpenCodeGoPluginCard', () => {
         },
         weekly: {
           usage: 0.891,
+          resetsAt: '2099-09-14T00:00:00.000Z',
           models: [
             { name: 'glm-5.2', requestCount: 4133 },
             { name: 'web search', requestCount: 264 },
@@ -275,17 +311,18 @@ describe('OpenCodeGoPluginCard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
 
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 89.1%`)).toBeTruthy() })
-    expect(screen.getByText(`${en.usageUsed} 18.8%`)).toBeTruthy()
+    await waitFor(() => { expect(screen.getAllByText('10.9%').length).toBeGreaterThan(0) })
+    expect(screen.getByText('LLM')).toBeTruthy()
+    expect(screen.getAllByRole('meter', { name: en.usageWeekly })[0]?.getAttribute('aria-valuenow')).toBe('10.9')
+    expect(screen.getByText('81.2%')).toBeTruthy()
+    expect(screen.queryByText(/重置/u)).toBeNull()
+    expect(screen.getAllByText(/Usage limits reset on/u).length).toBeGreaterThan(0)
     expect(screen.getByText(en.usageModels)).toBeTruthy()
     expect(screen.getByText('glm-5.2')).toBeTruthy()
     expect(screen.getByText(`4133 ${en.usageRequests}`)).toBeTruthy()
     expect(screen.getByText(`264 ${en.usageRequests}`)).toBeTruthy()
     expect(fetchUsage).toHaveBeenCalledWith({ baseURL: 'https://opencode.ai/zen/go/v1' })
-    expect(screen.getByRole('progressbar', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('89')
-
     expect(screen.queryByRole('tooltip')).toBeNull()
-    expect(screen.getByRole('progressbar', { name: en.usageSession }).querySelectorAll('[data-usage-segment]')).toHaveLength(0)
 
     const details = screen.getByRole('list', { name: en.usageModels })
     expect(details.style.maxHeight).toBe('')
@@ -318,7 +355,7 @@ describe('OpenCodeGoPluginCard', () => {
 
     await waitFor(() => { expect(screen.getByText(en.usageUnreachable)).toBeTruthy() })
     fireEvent.click(screen.getByRole('button', { name: en.usageRefresh }))
-    await waitFor(() => { expect(screen.getByText(`${en.usageUsed} 10%`)).toBeTruthy() })
+    await waitFor(() => { expect(screen.getAllByText('90%').length).toBeGreaterThan(0) })
     expect(fetchUsage).toHaveBeenCalledTimes(2)
   })
 
@@ -347,7 +384,9 @@ describe('OpenCodeGoPluginCard', () => {
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
     fireEvent.click(screen.getByRole('button', { name: en.models }))
 
-    const rows = Array.from(container.querySelectorAll<HTMLElement>('[data-model-row]'))
+    const listRows = (): HTMLElement[] => Array.from(container.querySelectorAll<HTMLElement>('[data-model-row]'))
+      .filter(row => row.closest('[data-sortable-ghost]') === null)
+    const rows = listRows()
     for (const [index, row] of rows.entries()) {
       const sortable = row.closest<HTMLElement>('[data-sortable-row]') ?? row
       vi.spyOn(sortable, 'getBoundingClientRect').mockReturnValue({
@@ -363,16 +402,78 @@ describe('OpenCodeGoPluginCard', () => {
 
     // The preview order changes before release: sibling cards move out of the
     // way while a floating ghost follows the pointer.
-    expect(Array.from(container.querySelectorAll('[data-model-row]')).map(row => row.getAttribute('data-model-row'))).toEqual([
+    expect(listRows().map(row => row.getAttribute('data-model-row'))).toEqual([
       'bravo', 'charlie', 'alpha',
     ])
     expect(document.querySelector('[data-sortable-ghost="true"]')).not.toBeNull()
 
     fireEvent.pointerUp(window, { pointerId: 1, clientX: 10, clientY: 140 })
+
+    // After release the preview order is the committed one and the floating
+    // ghost is gone, so it can never be mistaken for a list row again.
+    expect(listRows().map(row => row.getAttribute('data-model-row'))).toEqual([
+      'bravo', 'charlie', 'alpha',
+    ])
+    expect(document.querySelector('[data-sortable-ghost="true"]')).toBeNull()
+
     fireEvent.click(screen.getByRole('button', { name: en.save }))
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
       models: [{ id: 'bravo' }, { id: 'charlie' }, { id: 'alpha' }],
     }), undefined)
+  })
+
+  it('accepts K/M context window spellings', async () => {
+    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView) => Promise.resolve({ settings: next, revision: 2 }))
+    render(<OpenCodeGoPluginCard {...props({ saveConfiguration })} />)
+    fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
+    fireEvent.click(screen.getByRole('button', { name: en.models }))
+    fireEvent.click(screen.getByRole('button', { name: en.addModel }))
+    fireEvent.change(screen.getByLabelText(`${en.modelId} 1`), { target: { value: 'omen' } })
+    fireEvent.change(screen.getByLabelText(en.modelContext), { target: { value: '1m' } })
+    fireEvent.click(screen.getByRole('button', { name: en.save }))
+    await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
+    expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
+      models: [expect.objectContaining({ id: 'omen', contextWindow: 1_000_000 })],
+    }), undefined)
+  })
+  it('renders the shared detail template when the settings page asks for it', () => {
+    const onRefresh = vi.fn()
+    const usage = {
+      status: 'ready' as const,
+      fetchedAt: '2026-09-12T00:00:00.000Z',
+      windows: [
+        { id: 'session', label: 'Session', shortLabel: 'S', remainingPercent: 98, valueText: '98%' },
+        { id: 'weekly', label: 'Week', shortLabel: 'W', remainingPercent: 68, valueText: '68%' },
+      ],
+    }
+    const withModels = {
+      ...settings,
+      models: [
+        { id: 'alpha', contextWindow: 200_000 },
+        { id: 'beta', contextWindow: 200_000 },
+      ],
+    }
+    const current = snapshot({ value: withModels, base: withModels, user: {} })
+    const { container } = render(<OpenCodeGoPluginCard {...props({
+      useOpenCodeGoSettings: selector => selector(current),
+      mode: 'detail',
+      usage,
+      accountState: 'configured',
+      onRefresh,
+      copy: providerDetailCopy.en,
+      template: ProviderDetail,
+    })} />)
+
+    expect(container.querySelector('[data-provider-detail]')).not.toBeNull()
+    expect(container.querySelector('[data-c-quota]')).not.toBeNull()
+    // Both windows survive: the detail is not limited to the headline window.
+    expect(container.textContent).toContain('98%')
+    expect(container.textContent).toContain('68%')
+    expect(container.textContent).toContain('2 models')
+    expect(container.querySelector('[data-provider-models] .c-count')?.textContent).toBe('2')
+    // The plugin's own usage section is gone; only the shared quota block remains.
+    expect(container.querySelector('[aria-label="' + en.usage + '"]')).toBeNull()
+    expect(container.querySelectorAll('[data-c-quota]')).toHaveLength(1)
   })
 })

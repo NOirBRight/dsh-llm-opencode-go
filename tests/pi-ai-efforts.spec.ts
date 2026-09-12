@@ -38,6 +38,29 @@ describe('OpenCode Go pi-ai reasoningEfforts metadata', () => {
     expect(Object.keys(models.find(entry => entry.id === 'qwen3.8-flash')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'xhigh'])
   })
 
+  it('does not five-level-fill families without Codex max', () => {
+    const profile = createOpenCodeGoPiAiProfile(connection([
+      { id: 'glm-5', thinking: true },
+      { id: 'glm-5.3', thinking: true },
+      { id: 'longcat-2.0', thinking: true },
+      { id: 'qwen3.7-max', thinking: true },
+      { id: 'mimo-v2.5-pro', thinking: true },
+      { id: 'hy3', thinking: true },
+      { id: 'minimax-m3', thinking: true },
+      { id: 'minimax-m2.7', thinking: true },
+    ]))
+    const models = modelsOf(profile)
+    const keys = (id: string) => Object.keys(models.find(entry => entry.id === id)?.reasoningEfforts ?? {})
+    expect(keys('glm-5')).toEqual(['off', 'high'])
+    expect(keys('glm-5.3')).toEqual(['low', 'high', 'max'])
+    expect(keys('longcat-2.0')).toEqual(['off', 'high'])
+    expect(keys('qwen3.7-max')).toEqual(['off', 'high'])
+    expect(keys('mimo-v2.5-pro')).toEqual(['low', 'medium', 'xhigh'])
+    expect(keys('hy3')).toEqual(['low', 'medium', 'high'])
+    expect(keys('minimax-m3')).toEqual(['off', 'high'])
+    expect(keys('minimax-m2.7')).toEqual(['high'])
+  })
+
   it('declares gpt levels including max', () => {
     const profile = createOpenCodeGoPiAiProfile(connection([{ id: 'gpt-5.6-luna', thinking: true }]))
     const model = modelsOf(profile).find(entry => entry.id === 'gpt-5.6-luna')
@@ -57,6 +80,6 @@ describe('OpenCode Go pi-ai reasoningEfforts metadata', () => {
     expect(Object.keys(models.find(entry => entry.id === 'gpt-5.5')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
     expect(Object.keys(models.find(entry => entry.id === 'gpt-5.4-mini')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
     expect(Object.keys(models.find(entry => entry.id === 'grok-4.5')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'high'])
-    expect(Object.keys(models.find(entry => entry.id === 'grok-4.6')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'high'])
+    expect(Object.keys(models.find(entry => entry.id === 'grok-4.6')?.reasoningEfforts ?? {})).toEqual(['low', 'medium', 'high', 'xhigh'])
   })
 })

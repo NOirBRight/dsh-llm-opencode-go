@@ -71,15 +71,6 @@ export declare function UsageUpdatedAt(props: {
     label: string;
 }): ReactNode;
 export declare const providerHeaderStyle: CSSProperties;
-/** Join connection status and model count: "已登录 · 8 个模型". */
-export declare function formatProviderSummary(status: string, modelsLabel: string): string;
-/** Fixed-height collapsed header: mark, title, status · count, chevron. */
-export declare function ProviderCardHeader(props: {
-    title: string;
-    mark: ReactNode;
-    summary: string;
-    open: boolean;
-    unsaved?: boolean;
-    unsavedLabel?: string;
-}): ReactNode;
+export { ProviderCardHeader, ProviderQuotaMeter, ensureProviderUiCss } from './approved-a-header.tsx';
+export type { ProviderHeadlineQuota } from './approved-a-header.tsx';
 //# sourceMappingURL=provider-chrome.d.ts.map

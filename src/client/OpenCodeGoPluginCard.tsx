@@ -16,9 +16,12 @@ import type {
 
 import type { OpenCodeGoSettingsKey } from './locales.ts'
 import { BrandMark } from './BrandMark.tsx'
-import { Capabilities, ModelDetail, ModelDetailRow, inputStyle, modelContentStyle, rowInputStyle, selectStyle } from './model-catalog-ui.tsx'
+import { inputStyle, modelContentStyle, rowInputStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
-import { ProviderCardHeader, UsageHeader, UsageResetAt, UsageSkeleton, UsageUpdatedAt, formatProviderSummary, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
+import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
+import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -71,6 +74,8 @@ export interface OpenCodeGoPluginCardFace {
 export type OpenCodeGoPluginCardProps =
   PropsRuntime<'settings.provider.item'>
   & InjectFace<OpenCodeGoPluginCardFace>
+  // Present only on the settings page; an older host renders the legacy card.
+  & Partial<ProviderItemSlotContext>
 
 interface ModelDraft {
   /** Client-only stable identity; stripped before settings are saved. */
@@ -82,6 +87,7 @@ interface ModelDraft {
   vision?: boolean
   thinking?: boolean
   defaultEffort?: string
+  thinkingEfforts?: string[]
   tools?: boolean
 }
 
@@ -177,14 +183,6 @@ const disclosureStyle: CSSProperties = {
 // modelDetailStyle / capabilitiesStyle imported
 const statusStyle: CSSProperties = { margin: 0, fontSize: 13, color: 'var(--dsw-alias-label-secondary)' }
 const errorStyle: CSSProperties = { ...statusStyle, color: 'var(--dsw-alias-state-error-primary)' }
-const barTrackStyle: CSSProperties = {
-  boxSizing: 'border-box',
-  height: 14,
-  display: 'flex',
-  overflow: 'hidden',
-  borderRadius: 999,
-  background: 'color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent)',
-}
 const usageListStyle: CSSProperties = {
   margin: 0,
   padding: 0,
@@ -200,6 +198,12 @@ let nextModelRow = 0
 function newModelRowId(): string {
   nextModelRow += 1
   return 'opencode-go-model-row-' + String(nextModelRow)
+}
+
+function effortRow(id: string, thinkingEfforts: string[] | undefined): Pick<OpenCodeGoCatalogModelConfig, 'id' | 'thinking' | 'thinkingEfforts'> {
+  return thinkingEfforts === undefined
+    ? { id, thinking: true }
+    : { id, thinking: true, thinkingEfforts }
 }
 
 function modelDraftOf(model: OpenCodeGoCatalogModelConfig): ModelDraft {
@@ -218,9 +222,17 @@ function draftOf(settings: OpenCodeGoSettingsView): Draft {
   }
 }
 
+/** Same K/M spelling as Settings → Models: `1m` → 1000000, `256k` → 256000. */
 function integerOf(text: string): number | undefined {
-  if (text.trim().length === 0) return undefined
-  const value = Number(text)
+  const trimmed = text.trim()
+  if (trimmed.length === 0) return undefined
+  const match = /^(\d+(?:\.\d+)?)([km])?$/iu.exec(trimmed)
+  if (match === null || match[1] === undefined) return Number.NaN
+  const suffix = match[2]?.toLowerCase()
+  const scale = suffix === 'k' ? 1_000 : suffix === 'm' ? 1_000_000 : 1
+  const scaled = Number(match[1]) * scale
+  const rounded = Math.round(scaled)
+  const value = Math.abs(scaled - rounded) < 1e-6 ? rounded : scaled
   return Number.isSafeInteger(value) && value > 0 ? value : Number.NaN
 }
 
@@ -283,24 +295,6 @@ function rowKeyOf(model: ModelDraft): string {
 }
 
 /** One capability checkbox. */
-function Capability({ label, checked, disabled, onChange }: {
-  label: string
-  checked: boolean
-  disabled: boolean
-  onChange: (checked: boolean) => void
-}): ReactNode {
-  return (
-    <label style={{ ...labelStyle, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(event) => { onChange(event.target.checked) }}
-      />
-      {label}
-    </label>
-  )
-}
 
 /** Disclosure chevron; rotates to point down while open. */
 function IconChevron({ open }: { open: boolean }): ReactNode {
@@ -330,44 +324,53 @@ function usageResetCopy(t: OpenCodeGoPluginCardFace['t']): { at: string, atDays:
   return { at: t('usageResetAt'), atDays: t('usageResetAtDays') }
 }
 
-/** One quota window: an aggregate consumed percentage and solid meter. */
+function resetDetail(
+  iso: string | undefined,
+  t: OpenCodeGoPluginCardFace['t'],
+  fallback?: string,
+): string | undefined {
+  return resetLabelOf(iso, usageResetCopy(t)) ?? fallback
+}
 
-function UsageBar({ label, usedText, window: quota, t, fallbackReset }: {
+function headlineQuota(
+  usage: UsageState,
+  lastUsage: OpenCodeGoUsageView | undefined,
+  t: OpenCodeGoPluginCardFace['t'],
+): ProviderHeadlineQuota | undefined {
+  const view = usage.status === 'ready' ? usage.usage : lastUsage
+  const weekly = view?.weekly
+  const monthly = view?.monthly
+  const session = view?.session
+  const window = weekly ?? monthly ?? session
+  if (window !== undefined) {
+    const label = weekly !== undefined ? t('usageWeekly') : monthly !== undefined ? t('usageMonthly') : t('usageSession')
+    return {
+      label,
+      remainingPercent: remainingPercent(window.usage),
+      ...(() => {
+        const detail = resetDetail(window.resetsAt, t)
+        return detail === undefined ? {} : { detail }
+      })(),
+    }
+  }
+  if (usage.status === 'error' || usage.status === 'unsupported') return { label: t('usage') }
+  return undefined
+}
+
+/** One quota window in remaining-percent Approved A meter language. */
+function UsageBar({ label, window: quota, t, fallbackReset }: {
   label: string
-  usedText: string
   window: OpenCodeGoUsageWindow
   t: OpenCodeGoPluginCardFace['t']
   fallbackReset?: string
 }): ReactNode {
-  const percent = Math.round(quota.usage * 1000) / 10
-  const fill = Math.min(100, Math.max(0, percent))
+  const detail = resetDetail(quota.resetsAt, t, fallbackReset)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-        <span style={labelStyle}>{label}</span>
-        <span style={hintStyle}>{usedText} {percent}%</span>
-      </div>
-      <div
-        style={barTrackStyle}
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(fill)}
-      >
-        <span
-          data-usage-fill="true"
-          style={{
-            width: String(fill) + '%',
-            height: '100%',
-            flex: 'none',
-            background: 'var(--dsw-alias-state-business-primary)',
-            transition: 'width 200ms ease',
-          }}
-        />
-      </div>
-      <UsageResetAt label={resetLabelOf(quota.resetsAt, usageResetCopy(t)) ?? fallbackReset} />
-    </div>
+    <ProviderQuotaMeter
+      label={label}
+      remainingPercent={remainingPercent(quota.usage)}
+      {...detail === undefined ? {} : { detail }}
+    />
   )
 }
 
@@ -386,10 +389,12 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const [fetching, setFetching] = useState(false)
   const [failure, setFailure] = useState<string | undefined>(undefined)
   const [notice, setNotice] = useState<string | undefined>(undefined)
-  const [usage, setUsage] = useState<UsageState>({ status: 'idle' })
-  const [lastUsage, setLastUsage] = useState<OpenCodeGoUsageView | undefined>(undefined)
+  const cachedUsage = peekOpenCodeGoUsageView()
+  const [usage, setUsage] = useState<UsageState>(cachedUsage === undefined ? { status: 'idle' } : { status: 'ready', usage: cachedUsage })
+  const [lastUsage, setLastUsage] = useState<OpenCodeGoUsageView | undefined>(cachedUsage)
   const [usageUpdatedAt, setUsageUpdatedAt] = useState<Date | undefined>(undefined)
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const [modelSorting, setModelSorting] = useState(false)
   const [expandedModels, setExpandedModels] = useState<ReadonlySet<string>>(new Set())
   const dirty = source !== undefined && draft !== undefined && (!sameDraft(source, draft) || apiKey.length > 0)
 
@@ -418,10 +423,11 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
   if (snapshot.status === 'unavailable') {
     return (
-      <li style={cardStyle}>
+      <li style={cardStyle} data-provider-card="" data-provider-role="llm">
         <button
           type="button"
           style={headerStyle}
+          data-provider-card-header=""
           aria-expanded={open}
           aria-label={t(open ? 'collapse' : 'expand') + ': ' + t('title')}
           onClick={() => { setOpen(!open) }}
@@ -429,13 +435,15 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           <ProviderCardHeader
             title={t('title')}
             mark={<BrandMark />}
-            summary={formatProviderSummary(t('summaryOff'), t('summaryModels').replace('{count}', '0'))}
+            summary={t('summaryModels').replace('{count}', '0')}
+            status={t('summaryOff')}
+            role="llm"
             open={open}
           />
         </button>
         {open
           ? (
-            <div style={bodyStyle}>
+            <div style={bodyStyle} data-provider-body="">
               <p style={statusStyle} role="status">{t('remoteAccess')}</p>
             </div>
           )
@@ -465,9 +473,9 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
         const next: ModelDraft = { ...model }
         if (patch.id !== undefined) {
           next.id = patch.id
-          if (next.thinking === true && next.defaultEffort !== undefined && !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
-            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true, defaultEffort: next.defaultEffort })
-              ?? resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
+          if (next.thinking === true && next.defaultEffort !== undefined && !isValidEffortForModel(effortRow(next.id, next.thinkingEfforts), next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort({ ...effortRow(next.id, next.thinkingEfforts), defaultEffort: next.defaultEffort })
+              ?? resolveEffectiveDefaultEffort(effortRow(next.id, next.thinkingEfforts))
             if (fallback !== undefined) next.defaultEffort = fallback
             else delete next.defaultEffort
           }
@@ -489,8 +497,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           if (patch.thinking === undefined) delete next.thinking
           else next.thinking = patch.thinking
           if (patch.thinking !== true) delete next.defaultEffort
-          else if (next.defaultEffort === undefined || !isValidEffortForModel({ id: next.id, thinking: true }, next.defaultEffort)) {
-            const fallback = resolveEffectiveDefaultEffort({ id: next.id, thinking: true })
+          else if (next.defaultEffort === undefined || !isValidEffortForModel(effortRow(next.id, next.thinkingEfforts), next.defaultEffort)) {
+            const fallback = resolveEffectiveDefaultEffort(effortRow(next.id, next.thinkingEfforts))
             if (fallback !== undefined) next.defaultEffort = fallback
             else delete next.defaultEffort
           }
@@ -516,7 +524,9 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
 
   const loadUsage = async (): Promise<void> => {
-    setUsage({ status: 'loading' })
+    // The settings page owns quota in the shared detail; the card self-loads only in the legacy layout.
+    if (props.mode === 'detail') return
+    if (peekOpenCodeGoUsageView() === undefined) setUsage({ status: 'loading' })
     try {
       if (apiKey.trim().length > 0) {
         await props.storeApiKey(apiKey.trim())
@@ -527,6 +537,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       })
       if (read.kind === 'ok') {
         setLastUsage(read.usage)
+        persistOpenCodeGoUsage(read.usage)
         setUsageUpdatedAt(new Date())
       }
       setUsage(
@@ -541,10 +552,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
     }
   }
   useEffect(() => {
-    if (!open || snapshot.status !== 'ready') return
+    if (snapshot.status !== 'ready') return
     if (credential?.configured !== true) return
     void loadUsage()
-  }, [open, snapshot.status, credential?.configured])
+  }, [snapshot.status, credential?.configured])
 
   const fetchModels = async (): Promise<void> => {
     if (draft === undefined) return
@@ -618,8 +629,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
       setSourceRevision(accepted.revision)
       setApiKey('')
       setNotice(t('saved'))
-      setUsage({ status: 'idle' })
       void refreshCredential()
+      void loadUsage()
     } catch (error: unknown) {
       setFailure(messageOf(error, t('requestFailed')))
     } finally {
@@ -632,41 +643,85 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   else if (draft !== undefined && modelFailure(draft.models)) validation = t('invalidModel')
   else if (keyInvalid) validation = t('invalidApiKey')
 
-  const headerSummary = formatProviderSummary(
-    credential?.configured === true ? t('summaryOn') : t('summaryOff'),
-    t('summaryModels').replace('{count}', String(draft?.models.length ?? 0)),
-  )
+  const headerCount = t('summaryModels').replace('{count}', String(draft?.models.length ?? 0))
+  const headerStatus = credential?.configured === true ? t('summaryOn') : t('summaryOff')
+  const headerQuota = headlineQuota(usage, lastUsage, t)
 
-  return (
-    <li style={cardStyle}>
-      <button
-        type="button"
-        style={headerStyle}
-        aria-expanded={open}
-        aria-label={t(open ? 'collapse' : 'expand') + ': ' + title}
-        onClick={() => { setOpen(!open) }}
-      >
-        <ProviderCardHeader
-          title={title}
-          mark={<BrandMark />}
-          summary={headerSummary}
-          open={open}
-          unsaved={dirty}
-          unsavedLabel={t('unsaved')}
-        />
-      </button>
-      {open
-        ? (
-          <div style={bodyStyle}>
-            <p style={hintStyle}>{t('description')}</p>
-            {snapshot.status === 'loading' ? <p style={statusStyle}>{t('loading')}</p> : null}
-            {snapshot.status === 'ready' && !snapshot.writable ? <p style={statusStyle}>{t('readOnly')}</p> : null}
-            {draft === undefined
-              ? null
-              : (
-                <>
-                  <section style={sectionStyle}>
-                    <h3 style={sectionTitleStyle}>{t('connection')}</h3>
+  // Prototype C pieces, shared by the legacy card and the migrated detail.
+  const modelsList = (
+    <>
+                          <SortableList
+                            items={draft?.models ?? []}
+                            getId={model => model.rowId}
+                            disabled={disabled}
+                            dragLabel={(model, index) => {
+                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
+                              return t('dragModel') + ': ' + label
+                            }}
+                            onReorder={(models) => { patchDraft({ models }) }}
+                            renderItem={(model, index) => {
+                              const key = rowKeyOf(model)
+                              const expanded = expandedModels.has(key)
+                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
+                              return (
+                                <div data-model-row={label} style={modelContentStyle}>
+                                  <input
+                                    style={rowInputStyle}
+                                    value={model.id}
+                                    placeholder={t('modelId')}
+                                    aria-label={t('modelId') + ' ' + String(index + 1)}
+                                    disabled={disabled}
+                                    onChange={(event) => { patchModel(index, { id: event.target.value }) }}
+                                  />
+                                  <input
+                                    style={rowInputStyle}
+                                    value={model.name ?? ''}
+                                    placeholder={t('modelName')}
+                                    aria-label={t('modelName') + ' ' + String(index + 1)}
+                                    disabled={disabled}
+                                    onChange={(event) => { patchModel(index, { name: event.target.value || undefined }) }}
+                                  />
+                                  <button
+                                    type="button"
+                                    style={iconButtonStyle}
+                                    aria-label={t('modelDetails') + ': ' + label}
+                                    aria-expanded={expanded}
+                                    title={t('modelDetails')}
+                                    onClick={() => { toggleModel(key) }}
+                                  >
+                                    <IconChevron open={expanded} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    style={iconButtonStyle}
+                                    aria-label={t('remove') + ' ' + label}
+                                    title={t('remove')}
+                                    disabled={disabled}
+                                    onClick={() => { removeModel(index) }}
+                                  >
+                                    <IconTrash />
+                                  </button>
+                                   {expanded ? modelExtra(model, index) : null}
+                                </div>
+                              )
+                            }}
+                          />
+                          <button
+                            type="button"
+                            style={{ ...buttonStyle, alignSelf: 'flex-start' }}
+                            disabled={disabled}
+                            onClick={() => {
+                              const model: ModelDraft = { rowId: newModelRowId(), id: '', contextWindow: '' }
+                              patchDraft({ models: [...draft?.models ?? [], model] })
+                              setExpandedModels(current => new Set(current).add(model.rowId))
+                            }}
+                          >
+                            {t('addModel')}
+                          </button>
+    </>
+  )
+  const accountFields = (
+    <>
                     <label style={fieldStyle}>
                       <span style={labelStyle}>{t('apiKey')}</span>
                       <input
@@ -675,7 +730,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         aria-label={t('apiKey')}
                         autoComplete="off"
                         value={apiKey}
-                        placeholder={credential?.configured ? t('apiKeyConfigured') : t('apiKeyPlaceholder')}
+                        placeholder={credential?.configured ? t('apiKeyReplace') : t('apiKeyPlaceholder')}
                         disabled={busy || credential?.writable === false}
                         onChange={(event) => { setApiKey(event.target.value); setFailure(undefined); setNotice(undefined) }}
                       />
@@ -683,7 +738,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         {apiKey.length > 0
                           ? t('apiKeyPending')
                           : credential?.configured
-                            ? t('apiKeyConfigured')
+                            ? t('summaryOn')
                             : t('apiKeyUnset')}
                       </span>
                     </label>
@@ -693,11 +748,181 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         style={inputStyle}
                         type="url"
                         aria-label={t('baseURL')}
-                        value={draft.baseURL}
+                        value={draft?.baseURL ?? ''}
                         disabled={disabled}
                         onChange={(event) => { patchDraft({ baseURL: event.target.value }) }}
                       />
+                      <span style={hintStyle}>{t('baseURLHint')}</span>
                     </label>
+    </>
+  )
+  const draftBlock = (
+    <>
+            {validation === undefined ? null : <p style={errorStyle}>{validation}</p>}
+            {failure === undefined ? null : <p style={errorStyle}>{failure}</p>}
+            {notice === undefined ? null : <p style={statusStyle}>{notice}</p>}
+            <div style={actionsStyle}>
+              <button type="button" style={buttonStyle} disabled={!dirty || busy} onClick={discard}>{t('discard')}</button>
+              <button
+                type="button"
+                style={primaryButtonStyle}
+                disabled={!dirty || invalid || disabled}
+                onClick={() => { void save() }}
+              >
+                {t(busy ? 'saving' : 'save')}
+              </button>
+            </div>
+    </>
+  )
+
+
+  /** Provider-specific fields for one expanded model row; shared by both layouts. */
+  const modelExtra = (model: ModelDraft, index: number): ReactNode => (
+    <div className="c-extra-grid">
+      <label className="c-field">
+        <span className="c-field-label">{t('modelContext')}</span>
+        <input
+          className="c-input"
+          inputMode="numeric"
+          value={model.contextWindow}
+          disabled={disabled}
+          aria-label={t('modelContext')}
+          onChange={(event) => { patchModel(index, { contextWindow: event.target.value }) }}
+        />
+      </label>
+      <div className="c-extra-checks">
+        <label>
+          <input type="checkbox" checked={model.vision === true} disabled={disabled} onChange={(event) => { patchModel(index, { vision: event.target.checked }) }} />
+          {t('vision')}
+        </label>
+        <label>
+          <input type="checkbox" checked={model.thinking === true} disabled={disabled} onChange={(event) => { patchModel(index, { thinking: event.target.checked }) }} />
+          {t('thinking')}
+        </label>
+      </div>
+      {model.thinking === true
+        ? (
+          <label className="c-field">
+            <span className="c-field-label">{t('defaultEffort')}</span>
+            <select
+              className="c-input"
+              value={resolveEffectiveDefaultEffort(model) ?? ''}
+              disabled={disabled}
+              onChange={(event) => { patchModel(index, { defaultEffort: event.target.value || undefined }) }}
+              aria-label={t('defaultEffort')}
+            >
+              {openCodeGoSupportedEfforts(effortRow(model.id, model.thinkingEfforts)).map(level => (
+                <option key={level} value={level}>{formatEffortName(level)}</option>
+              ))}
+            </select>
+          </label>
+        )
+        : null}
+    </div>
+  )
+
+  // Prototype C detail: the shared template owns the layout, this card owns OpenCode Go's data.
+  const SharedDetail = props.template
+  const detailCopy = props.copy
+  if (props.mode === 'detail' && SharedDetail !== undefined && detailCopy !== undefined && draft !== undefined) {
+    const configured = credential?.configured === true
+    return (
+        <SharedDetail
+          name={title}
+          role="llm"
+          mark={<BrandMark />}
+          copy={detailCopy}
+          notice={t('description')}
+          account={{
+            state: configured ? 'configured' : 'unconnected',
+            label: configured ? t('summaryOn') : t('apiKeyUnset'),
+            body: accountFields,
+          }}
+          quota={{
+            status: props.usage?.status ?? 'loading',
+            windows: props.usage?.windows ?? [],
+            ...(props.onRefresh === undefined ? {} : { onRefresh: props.onRefresh }),
+          }}
+          models={{
+            count: draft.models.length,
+            allOpen: catalogOpen,
+            onToggleAll: () => { setCatalogOpen(value => !value) },
+            sorting: modelSorting,
+            onToggleSorting: () => { setModelSorting(current => !current) },
+            sortDisabled: disabled || draft.models.length < 2,
+            onChooseFromAccount: () => { void fetchModels() },
+            chooseDisabled: fetching || invalid || snapshot.status !== 'ready',
+            items: draft.models.map(model => ({
+              rowId: model.rowId,
+              id: model.id,
+              ...(model.name === undefined ? {} : { name: model.name }),
+            })),
+            expanded: [...expandedModels],
+            onPatch: (rowId, patch) => {
+              const index = draft.models.findIndex(model => model.rowId === rowId)
+              if (index >= 0) patchModel(index, patch)
+            },
+            onRemove: (rowId) => {
+              const index = draft.models.findIndex(model => model.rowId === rowId)
+              if (index >= 0) removeModel(index)
+            },
+            onToggle: (rowId) => { toggleModel(rowId) },
+            onReorder: (rowIds) => {
+              const byId = new Map(draft.models.map(model => [model.rowId, model]))
+              const next = rowIds.map(rowId => byId.get(rowId)).filter((model): model is ModelDraft => model !== undefined)
+              if (next.length === draft.models.length) patchDraft({ models: next })
+            },
+            onAdd: () => {
+              const model: ModelDraft = { rowId: newModelRowId(), id: '', contextWindow: '' }
+              patchDraft({ models: [...draft.models, model] })
+              setExpandedModels(current => new Set(current).add(model.rowId))
+            },
+            addDisabled: disabled,
+            extra: (row) => {
+              const index = draft.models.findIndex(model => model.rowId === row.rowId)
+              const model = draft.models[index]
+              return index < 0 || model === undefined ? null : modelExtra(model, index)
+            },
+          }}
+          draft={draftBlock}
+        />
+    )
+  }
+
+  return (
+    <li style={cardStyle} data-provider-card="" data-provider-role="llm">
+      <button
+        type="button"
+        style={headerStyle}
+        data-provider-card-header=""
+        aria-expanded={open}
+        aria-label={t(open ? 'collapse' : 'expand') + ': ' + title}
+        onClick={() => { setOpen(!open) }}
+      >
+        <ProviderCardHeader
+          title={title}
+          mark={<BrandMark />}
+          summary={headerCount}
+          status={headerStatus}
+          role="llm"
+          {...headerQuota === undefined ? {} : { quota: headerQuota }}
+          open={open}
+          unsaved={dirty}
+          unsavedLabel={t('unsaved')}
+        />
+      </button>
+      {open
+        ? (
+          <div style={bodyStyle} data-provider-body="">
+            {snapshot.status === 'loading' ? <p style={statusStyle}>{t('loading')}</p> : null}
+            {snapshot.status === 'ready' && !snapshot.writable ? <p style={statusStyle}>{t('readOnly')}</p> : null}
+            {draft === undefined
+              ? null
+              : (
+                <>
+                  <section style={sectionStyle}>
+                    <h3 style={sectionTitleStyle}>{t('connection')}</h3>
+                    {accountFields}
                   </section>
 
                   <section style={sectionStyle} aria-label={t('usage')}>
@@ -729,7 +954,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageSession')}
-                                usedText={t('usageUsed')}
                                 window={bars.session}
                                 t={t}
                                 fallbackReset={t('usageResetEveryHours').replace('{count}', '5')}
@@ -740,7 +964,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageWeekly')}
-                                usedText={t('usageUsed')}
                                 window={bars.weekly}
                                 t={t}
                                 fallbackReset={t('usageResetEveryDays').replace('{count}', '7')}
@@ -751,7 +974,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                             : (
                               <UsageBar
                                 label={t('usageMonthly')}
-                                usedText={t('usageUsed')}
                                 window={bars.monthly}
                                 t={t}
                                 fallbackReset={t('usageResetEveryDays').replace('{count}', '30')}
@@ -813,138 +1035,12 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
                         {t(fetching ? 'fetchingModels' : 'fetchModels')}
                       </button>
                     </div>
-                    {catalogOpen
-                      ? (
-                        <>
-                          <SortableList
-                            items={draft.models}
-                            getId={model => model.rowId}
-                            disabled={disabled}
-                            dragLabel={(model, index) => {
-                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
-                              return t('dragModel') + ': ' + label
-                            }}
-                            onReorder={(models) => { patchDraft({ models }) }}
-                            renderItem={(model, index) => {
-                              const key = rowKeyOf(model)
-                              const expanded = expandedModels.has(key)
-                              const label = model.id.trim().length > 0 ? model.id.trim() : String(index + 1)
-                              return (
-                                <div data-model-row={label} style={modelContentStyle}>
-                                  <input
-                                    style={rowInputStyle}
-                                    value={model.id}
-                                    placeholder={t('modelId')}
-                                    aria-label={t('modelId') + ' ' + String(index + 1)}
-                                    disabled={disabled}
-                                    onChange={(event) => { patchModel(index, { id: event.target.value }) }}
-                                  />
-                                  <input
-                                    style={rowInputStyle}
-                                    value={model.name ?? ''}
-                                    placeholder={t('modelName')}
-                                    aria-label={t('modelName') + ' ' + String(index + 1)}
-                                    disabled={disabled}
-                                    onChange={(event) => { patchModel(index, { name: event.target.value || undefined }) }}
-                                  />
-                                  <button
-                                    type="button"
-                                    style={iconButtonStyle}
-                                    aria-label={t('modelDetails') + ': ' + label}
-                                    aria-expanded={expanded}
-                                    title={t('modelDetails')}
-                                    onClick={() => { toggleModel(key) }}
-                                  >
-                                    <IconChevron open={expanded} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    style={iconButtonStyle}
-                                    aria-label={t('remove') + ' ' + label}
-                                    title={t('remove')}
-                                    disabled={disabled}
-                                    onClick={() => { removeModel(index) }}
-                                  >
-                                    <IconTrash />
-                                  </button>
-                                  {expanded
-                                    ? (
-                                      <ModelDetail>
-                                        <ModelDetailRow>
-                                          <label style={fieldStyle}>
-                                            <span style={labelStyle}>{t('modelContext')}</span>
-                                            <input
-                                              style={inputStyle}
-                                              inputMode="numeric"
-                                              value={model.contextWindow}
-                                              disabled={disabled}
-                                              aria-label={t('modelContext')}
-                                              onChange={(event) => { patchModel(index, { contextWindow: event.target.value }) }}
-                                            />
-                                          </label>
-                                        </ModelDetailRow>
-                                        <Capabilities>
-                                          <Capability label={t('vision')} checked={model.vision === true} disabled={disabled} onChange={(vision) => { patchModel(index, { vision }) }} />
-                                          <Capability label={t('thinking')} checked={model.thinking === true} disabled={disabled} onChange={(thinking) => { patchModel(index, { thinking }) }} />
-                                          {model.thinking === true
-                                            ? (
-                                              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, ...labelStyle }}>
-                                                <span style={labelStyle}>{t('defaultEffort')}</span>
-                                                <select
-                                                  style={selectStyle}
-                                                  value={resolveEffectiveDefaultEffort(model) ?? ''}
-                                                  disabled={disabled}
-                                                  onChange={(event) => { patchModel(index, { defaultEffort: event.target.value || undefined }) }}
-                                                  aria-label={t('defaultEffort')}
-                                                >
-                                                  {openCodeGoSupportedEfforts({ id: model.id, thinking: true }).map(level => (
-                                                    <option key={level} value={level}>{formatEffortName(level)}</option>
-                                                  ))}
-                                                </select>
-                                              </label>
-                                            )
-                                            : null}
-                                        </Capabilities>
-                                      </ModelDetail>
-                                    )
-                                    : null}
-                                </div>
-                              )
-                            }}
-                          />
-                          <button
-                            type="button"
-                            style={{ ...buttonStyle, alignSelf: 'flex-start' }}
-                            disabled={disabled}
-                            onClick={() => {
-                              const model: ModelDraft = { rowId: newModelRowId(), id: '', contextWindow: '' }
-                              patchDraft({ models: [...draft.models, model] })
-                              setExpandedModels(current => new Set(current).add(model.rowId))
-                            }}
-                          >
-                            {t('addModel')}
-                          </button>
-                        </>
-                      )
-                      : null}
+                    {catalogOpen ? modelsList : null}
                   </section>
                 </>
               )}
 
-            {validation === undefined ? null : <p style={errorStyle}>{validation}</p>}
-            {failure === undefined ? null : <p style={errorStyle}>{failure}</p>}
-            {notice === undefined ? null : <p style={statusStyle}>{notice}</p>}
-            <div style={actionsStyle}>
-              <button type="button" style={buttonStyle} disabled={!dirty || busy} onClick={discard}>{t('discard')}</button>
-              <button
-                type="button"
-                style={primaryButtonStyle}
-                disabled={!dirty || invalid || disabled}
-                onClick={() => { void save() }}
-              >
-                {t(busy ? 'saving' : 'save')}
-              </button>
-            </div>
+            {draftBlock}
           </div>
         )
         : null}

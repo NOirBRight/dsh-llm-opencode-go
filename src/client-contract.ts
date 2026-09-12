@@ -50,6 +50,8 @@ export interface OpenCodeGoCatalogModelConfig {
   thinking?: boolean
   /** Chat-picker default when the conversation has not chosen a level. */
   defaultEffort?: string
+  /** Live effort ids from models.dev; omission uses the family table. */
+  thinkingEfforts?: string[]
   /** Optional explicit protocol override; omission uses the documented mapping. */
   api?: OpenCodeGoApi
   /** Legacy capability flag. Ignored at runtime; still decoded. */
@@ -162,6 +164,7 @@ export function decodeOpenCodeGoCatalogModel(value: unknown): OpenCodeGoCatalogM
   const vision = value.vision
   const thinking = value.thinking
   const defaultEffort = value.defaultEffort
+  const thinkingEfforts = value.thinkingEfforts
   const tools = value.tools
   const protocol = value.api
   if (name !== undefined && typeof name !== 'string') return undefined
@@ -170,6 +173,14 @@ export function decodeOpenCodeGoCatalogModel(value: unknown): OpenCodeGoCatalogM
   if (vision !== undefined && typeof vision !== 'boolean') return undefined
   if (thinking !== undefined && typeof thinking !== 'boolean') return undefined
   if (defaultEffort !== undefined && (typeof defaultEffort !== 'string' || defaultEffort.length === 0)) return undefined
+  const efforts: string[] = []
+  if (thinkingEfforts !== undefined) {
+    if (!Array.isArray(thinkingEfforts)) return undefined
+    for (const item of thinkingEfforts) {
+      if (typeof item !== 'string' || item.length === 0) return undefined
+      efforts.push(item)
+    }
+  }
   if (tools !== undefined && typeof tools !== 'boolean') return undefined
   if (protocol !== undefined && !isOpenCodeGoApi(protocol)) return undefined
   return {
@@ -181,6 +192,7 @@ export function decodeOpenCodeGoCatalogModel(value: unknown): OpenCodeGoCatalogM
     ...(vision === undefined ? {} : { vision }),
     ...(thinking === undefined ? {} : { thinking }),
     ...(defaultEffort === undefined ? {} : { defaultEffort }),
+    ...(efforts.length === 0 ? {} : { thinkingEfforts: efforts }),
     ...(protocol === undefined ? {} : { api: protocol }),
     ...(tools === undefined ? {} : { tools }),
   }

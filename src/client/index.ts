@@ -31,19 +31,26 @@ import { OpenCodeGoModelPicker, OpenCodeGoModelPickerController } from './OpenCo
 import type { OpenCodeGoModelPickerFace } from './OpenCodeGoModelPicker.tsx'
 import { en, zh } from './locales.ts'
 import type { OpenCodeGoSettingsKey } from './locales.ts'
+import { createOpenCodeGoUsageReader } from './usage-reader.ts'
 
+
+import type {} from 'dsh-llm-providers-ui/client'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'settings.provider.item': { kind: 'keyed'; scope: 'root' }
   }
 }
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     /** OpenCode Go Plugin configuration copy. */
     'settings.opencode-go': OpenCodeGoSettingsKey
   }
 }
+
+/** Grace period for dsh-llm-providers-ui to register the providers settings section before the missing-owner warning fires. */
+const MISSING_OWNER_GRACE_MS = 15_000
 
 /** Stable browser-plugin name. */
 export const name = 'dsh-llm-opencode-go-client'
@@ -115,6 +122,15 @@ export function apply(ctx: ClientContext): void {
     if (!result.ok) throw new Error(result.error.message)
     const accepted = decodeOpenCodeGoSaveResult(result.value)
     if (accepted === undefined) throw new Error(t('requestFailed'))
+    updateSnapshot({
+      status: 'ready',
+      value: accepted.settings,
+      base: accepted.settings,
+      user: accepted.settings,
+      revision: accepted.revision,
+      writable: current.writable,
+      mode: current.mode,
+    })
     return accepted
   }
 
@@ -122,6 +138,7 @@ export function apply(ctx: ClientContext): void {
     if (value.trim().length === 0) throw new Error(t('invalidApiKey'))
     const result = await callPlugin(OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, { apiKey: value })
     if (!result.ok) throw new Error(result.error.message)
+    ctx.get('providerDirectory')?.invalidateUsage(OPENCODE_GO_SETTINGS_NAMESPACE)
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {
@@ -180,15 +197,41 @@ export function apply(ctx: ClientContext): void {
       closeModelPicker: picker.close,
     }),
   }, OpenCodeGoPluginCard))
+  ctx.inject(['providerDirectory'], (directoryScope) => {
+    const directory = directoryScope.providerDirectory
+    if (directory === undefined) return
+    directoryScope.effect(
+      () => directory.register({
+        key: OPENCODE_GO_SETTINGS_NAMESPACE,
+        name: 'OpenCode Go',
+        role: 'llm',
+        header: 'shared',
+        // The card renders the shared detail template; the settings page adds only the breadcrumb.
+        detail: 'shared',
+        usage: createOpenCodeGoUsageReader(),
+        modelCount: () => scope.getSnapshot().value?.models.length,
+      }),
+      'dsh-llm-opencode-go: provider directory',
+    )
+  })
   ctx.effect(() => {
     let warned = false
+    const hasProvidersSection = (): boolean =>
+      ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers')
     const check = (): void => {
-      if (ctx.slots.entries('settings.section').some(entry => entry.options.id === 'providers') || warned) return
+      if (hasProvidersSection() || warned) return
       warned = true
       console.warn('[dsh-llm-providers-ui] LLM Providers page missing for card llm-opencode-go: install dsh-llm-providers-ui to show the card. Host route remains active.')
     }
-    const timer = setTimeout(check, 0)
-    const stop = ctx.slots.subscribe('settings.section', check)
+    // The owner registers the providers section only after the settings snapshot
+    // arrives and the page becomes visible, so an immediate check always runs
+    // ahead of it: grant a grace period and cancel the warning on registration.
+    const timer = setTimeout(check, MISSING_OWNER_GRACE_MS)
+    const stop = ctx.slots.subscribe('settings.section', () => {
+      if (!hasProvidersSection()) return
+      clearTimeout(timer)
+      warned = true
+    })
     return () => {
       clearTimeout(timer)
       stop()
