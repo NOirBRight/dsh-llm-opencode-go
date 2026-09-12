@@ -524,6 +524,8 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
 
   const loadUsage = async (): Promise<void> => {
+    // The settings page owns quota in the shared detail; the card self-loads only in the legacy layout.
+    if (props.mode === 'detail') return
     if (peekOpenCodeGoUsageView() === undefined) setUsage({ status: 'loading' })
     try {
       if (apiKey.trim().length > 0) {
