@@ -827,7 +827,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   if (props.mode === 'detail' && SharedDetail !== undefined && detailCopy !== undefined && draft !== undefined) {
     const configured = credential?.configured === true
     return (
-      <li style={cardStyle} data-provider-card="" data-provider-role="llm">
         <SharedDetail
           name={title}
           role="llm"
@@ -887,7 +886,6 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           }}
           draft={draftBlock}
         />
-      </li>
     )
   }
 
