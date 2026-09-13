@@ -159,6 +159,6 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 Configuration: use the plugin section in Settings for Web UI plugins, or the profile dsh.profile.bundles entry for Host-only plugins. Start with this README's minimal YAML/JSON example and provide credentials/backend addresses explicitly.
 
-Rollback: rerun the fixed v0.1.17 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
+Rollback: rerun the fixed v0.1.28 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.24](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.28) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.28/SHA256SUMS).
+Release and integrity: [v0.1.28](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.28) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.28/SHA256SUMS).
