@@ -255,7 +255,7 @@ function checkDependencySpecs(manifest, label) {
     for (const [name, spec] of Object.entries(manifest[section] ?? {})) {
       if (typeof spec !== 'string') fail(label + ' has a non-string ' + section + '.' + name)
       if (/^(?:file|link|workspace|npm|github|git\+|https?):/iu.test(spec) || spec.startsWith('/') || /^[A-Za-z]:[\\/]/u.test(spec)) fail(label + ' contains a local or alias dependency at ' + section + '.' + name)
-      if (name.startsWith('@deepseek-ai/dsh-') && label === 'packed package' && spec !== ALPHA_VERSION) fail(label + ' DSH dependency ' + name + ' is not pinned to ' + ALPHA_VERSION)
+      if (name.startsWith('@deepseek-ai/dsh-') && label === 'packed package' && spec !== '*') fail(label + ' DSH peer ' + name + ' must be *, got ' + spec)
     }
   }
 }

@@ -62,7 +62,11 @@ export interface OpenCodeGoCatalogModelConfig {
 export interface OpenCodeGoSettingsView {
   /** Credential reference resolved by the Host. */
   apiKeyEnv: string
-  /** Go API base URL ending in /zen/go/v1. */
+  /**
+   * OpenAI-compatible Go origin, usually `https://opencode.ai/zen/go/v1`.
+   * Completions, Responses, listing, and usage use this value. Messages chat
+   * strips one trailing `/v1` before the Anthropic SDK appends `/v1/messages`.
+   */
   baseURL: string
   /** Advisory model catalog. */
   models: OpenCodeGoCatalogModelConfig[]

@@ -47,7 +47,7 @@ export {
 } from './adapter.ts'
 export type { OpenCodeGoAdapterOptions, OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adapter.ts'
 export { PUBLIC_BASE_URL, discoverModels, parseOpenCodeGoModels } from './discovery.ts'
-export { protocolForModel, enrichModel, familyForModel, knownModel } from './catalog.ts'
+export { protocolForModel, chatBaseURLForApi, enrichModel, familyForModel, knownModel } from './catalog.ts'
 export {
   DEFAULT_USAGE_REQUEST_TIMEOUT_MS,
   OPENCODE_GO_USAGE_FAILED,

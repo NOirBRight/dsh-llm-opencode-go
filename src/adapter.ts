@@ -36,7 +36,7 @@ export type OpenCodeGoCatalogModel = OpenCodeGoCatalogModelConfig
 
 /** Validated connection facts for one operation. */
 export interface OpenCodeGoConnectionOptions {
-  /** Go API base, including /zen/go/v1. */
+  /** OpenAI-compatible Go origin, including `/zen/go/v1`. Messages chat strips one trailing `/v1`. */
   baseURL: string
   /** Credential reference of this same resolution, resolved per request. */
   apiKeyEnv: CredentialRef

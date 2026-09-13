@@ -10,7 +10,7 @@ import type { OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adap
 export { DEFAULT_CONTEXT_WINDOW, DEFAULT_STREAM_IDLE_TIMEOUT_MS, OpenCodeGoAdapter, } from './adapter.ts';
 export type { OpenCodeGoAdapterOptions, OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adapter.ts';
 export { PUBLIC_BASE_URL, discoverModels, parseOpenCodeGoModels } from './discovery.ts';
-export { protocolForModel, enrichModel, familyForModel, knownModel } from './catalog.ts';
+export { protocolForModel, chatBaseURLForApi, enrichModel, familyForModel, knownModel } from './catalog.ts';
 export { DEFAULT_USAGE_REQUEST_TIMEOUT_MS, OPENCODE_GO_USAGE_FAILED, OPENCODE_GO_USAGE_UNSUPPORTED, parseOpenCodeGoUsage, readOpenCodeGoUsage, } from './usage.ts';
 export type { OpenCodeGoUsageRequest } from './usage.ts';
 export { DEFAULT_API_KEY_ENV, OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT, OPENCODE_GO_DISCOVER_ENDPOINT, OPENCODE_GO_PROVIDER, OPENCODE_GO_PUBLIC_BASE_URL, OPENCODE_GO_RPC_CHANNEL, OPENCODE_GO_SAVE_ENDPOINT, OPENCODE_GO_SETTINGS_READ_ENDPOINT, OPENCODE_GO_SETTINGS_NAMESPACE, OPENCODE_GO_USAGE_ENDPOINT, decodeOpenCodeGoCatalogModel, decodeOpenCodeGoCredentialSetRequest, decodeOpenCodeGoDiscoveryRequest, decodeOpenCodeGoDiscoveryResult, decodeOpenCodeGoSettingsReadResult, decodeOpenCodeGoSaveRequest, decodeOpenCodeGoSaveResult, decodeOpenCodeGoSettings, decodeOpenCodeGoUsageReply, } from './client-contract.ts';

@@ -1,3 +1,8 @@
+## v0.1.28
+
+- Messages chat (MiniMax, Qwen) uses the Anthropic origin: configured `baseURL` without one trailing `/v1`, so the SDK posts `https://opencode.ai/zen/go/v1/messages`. Completions and Responses keep `https://opencode.ai/zen/go/v1`. Mapping follows the official Go endpoint table.
+- DSH Host packages are no longer version-locked. `@deepseek-ai/dsh-*` peers are `*` and optional; unknown Hosts warn once and still mount. Cordis stays `>=4.0.2 <5.0.0`. Compile-target `devDependencies` remain `0.1.5-rc.1`.
+
 ## v0.1.27
 
 - 详情页改用共享模板 `ProviderDetail`（由设置页通过 slot 上下文下发，插件不再自带模板与样式）。

@@ -8,12 +8,9 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ## 兼容性
 
-已验证运行时是 DeepSeek Harness `0.1.5-rc.1`（当前）以及历史上的 `0.1.2-alpha.4` / `0.1.2-rc.1`（Cordis `4.0.2`）；这份记录只是证据，不是 allowlist。
+宿主 `@deepseek-ai/dsh-*` 不锁定发行号：peer 为 `*` 且 optional。`devDependencies` 钉编译目标（`0.1.5-rc.1`）。Cordis 保持 `>=4.0.2 <5.0.0`。
 
-未知的新版本会先打一条 warning，再按正常挂载路径 best-effort 尝试，不会因为未验证而跳过。
-
-只有复现过的故障才会加入 blocklist；受影响版本、原因和证据见[兼容性记录](package.json)。
-
+`package.json#dsh.compatibility.dshReleases` 里的已验证宿主是证据，不是允许列表。未知的新宿主告警一次后仍按正常路径挂载。只有复现过的故障才会加入 blocklist。
 
 ## 安装
 
@@ -21,9 +18,9 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.12-015rc1e/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.8/dsh-llm-providers-ui-0.2.8.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24-015rc1d/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.28/dsh-llm-opencode-go-0.1.28.tgz
 dsh web
 ~~~
 
@@ -53,9 +50,9 @@ Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 
 
 聊天使用一条 `opencode-go` 路由。adapter **不会**再把该路由登记成 configurable provider（pi-ai 目录已经占了这个名字）。按模型 `api` 选择：
 
-    openai-completions   POST /zen/go/v1/chat/completions
-    openai-responses     POST /zen/go/v1/responses
-    anthropic-messages   POST /zen/go/v1/messages
+    openai-completions   POST {baseURL}/chat/completions
+    openai-responses     POST {baseURL}/responses
+    anthropic-messages   POST {去掉末尾 /v1 的 baseURL}/v1/messages
 
 原生独立能力仍只在 Host：
 
@@ -130,18 +127,18 @@ Latest（Owner + 本插件；Web 必须一起装）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.8.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.28.tgz
 ~~~
 
 固定版本（可复现）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.12-015rc1e/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.8/dsh-llm-providers-ui-0.2.8.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24-015rc1d/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.28/dsh-llm-opencode-go-0.1.28.tgz
 ~~~
 
 更新、卸载与验证：
@@ -149,9 +146,9 @@ dsh plugin --profile web add --force \
 ~~~sh
 # 更新 Owner + 本插件到 Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.8.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.28.tgz
 # 验证加载与版本
 dsh plugin --profile web list
 dsh plugin --profile web doctor
@@ -163,4 +160,4 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 回滚：重新执行固定版本 v0.1.17 命令，确认插件列表后只重启一次 Web 服务。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
 
-Release 与完整性：[v0.1.24](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.24) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24/SHA256SUMS)。
+Release 与完整性：[v0.1.24](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.28) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.28/SHA256SUMS)。
