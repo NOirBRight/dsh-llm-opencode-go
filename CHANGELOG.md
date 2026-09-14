@@ -1,3 +1,7 @@
+## v0.1.29
+
+Quota cache withheld/epoch. Register catalog extras against providers-ui 0.2.9.
+
 ## v0.1.28
 
 - Messages chat (MiniMax, Qwen) uses the Anthropic origin: configured `baseURL` without one trailing `/v1`, so the SDK posts `https://opencode.ai/zen/go/v1/messages`. Completions and Responses keep `https://opencode.ai/zen/go/v1`. Mapping follows the official Go endpoint table.
