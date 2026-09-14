@@ -1,6 +1,6 @@
 /** OpenCode Go connection and model-catalog card for Plugin configuration. */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -19,9 +19,11 @@ import { BrandMark } from './BrandMark.tsx'
 import { inputStyle, modelContentStyle, rowInputStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import { useProviderQuotaCache } from 'dsh-llm-providers-ui/provider-ui'
 import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
 import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
 import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
+import { OPENCODE_GO_SETTINGS_NAMESPACE } from '../client-contract.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -396,8 +398,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [modelSorting, setModelSorting] = useState(false)
   const [expandedModels, setExpandedModels] = useState<ReadonlySet<string>>(new Set())
+  const usageEpoch = useRef(0)
   const dirty = source !== undefined && draft !== undefined && (!sameDraft(source, draft) || apiKey.length > 0)
 
+  useEffect(() => () => { usageEpoch.current++ }, [])
   useEffect(() => {
     if (snapshot.status !== 'ready' || snapshot.value === undefined) return
     if (snapshot.revision === sourceRevision) return
@@ -526,15 +530,19 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const loadUsage = async (): Promise<void> => {
     // The settings page owns quota in the shared detail; the card self-loads only in the legacy layout.
     if (props.mode === 'detail') return
+    const epoch = ++usageEpoch.current
     if (peekOpenCodeGoUsageView() === undefined) setUsage({ status: 'loading' })
     try {
       if (apiKey.trim().length > 0) {
         await props.storeApiKey(apiKey.trim())
+        if (epoch !== usageEpoch.current) return
         await refreshCredential()
+        if (epoch !== usageEpoch.current) return
       }
       const read = await props.fetchUsage({
         ...draft === undefined ? {} : { baseURL: draft.baseURL.trim() },
       })
+      if (epoch !== usageEpoch.current) return
       if (read.kind === 'ok') {
         setLastUsage(read.usage)
         persistOpenCodeGoUsage(read.usage)
@@ -548,6 +556,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
             : { status: 'unsupported' },
       )
     } catch (error: unknown) {
+      if (epoch !== usageEpoch.current) return
       setUsage({ status: 'error', message: usageErrorOf(error, t) })
     }
   }
@@ -645,7 +654,14 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
   const headerCount = t('summaryModels').replace('{count}', String(draft?.models.length ?? 0))
   const headerStatus = credential?.configured === true ? t('summaryOn') : t('summaryOff')
-  const headerQuota = headlineQuota(usage, lastUsage, t)
+  const liveQuota = headlineQuota(usage.status === 'ready' ? usage : { status: 'idle' }, undefined, t) ?? null
+  const withheld = credential?.configured === false
+    || usage.status === 'error' || usage.status === 'unsupported' || usage.status === 'needs-restart'
+  const headerQuota = useProviderQuotaCache(OPENCODE_GO_SETTINGS_NAMESPACE, 'OpenCode Go', liveQuota, {
+    answered: credential !== undefined,
+    signedOut: credential?.configured === false,
+    withheld,
+  })
 
   // Prototype C pieces, shared by the legacy card and the migrated detail.
   const modelsList = (
@@ -905,7 +921,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           summary={headerCount}
           status={headerStatus}
           role="llm"
-          {...headerQuota === undefined ? {} : { quota: headerQuota }}
+          {...headerQuota === null ? {} : { quota: headerQuota }}
           open={open}
           unsaved={dirty}
           unsavedLabel={t('unsaved')}

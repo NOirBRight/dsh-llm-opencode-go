@@ -65,6 +65,7 @@ export function apply(ctx: ClientContext): void {
     'dsh-llm-opencode-go: Plugin configuration copy',
   )
   const t = ctx.locale.bind(localeNamespace) as OpenCodeGoPluginCardFace['t']
+  let closed = false
   let snapshot: SettingsScopeSnapshot<OpenCodeGoSettingsView> = { status: 'loading', value: undefined, base: undefined, user: undefined, revision: undefined, writable: false, mode: 'memory' }
   const listeners = new Set<() => void>()
   const scope: SettingsScope<OpenCodeGoSettingsView> = {
@@ -74,24 +75,39 @@ export function apply(ctx: ClientContext): void {
     set: async () => { throw new Error('settings are managed by the provider RPC') },
     unset: async () => { throw new Error('settings are managed by the provider RPC') },
   }
-  const updateSnapshot = (next: SettingsScopeSnapshot<OpenCodeGoSettingsView>): void => { snapshot = next; listeners.forEach(listener => { listener() }) }
+  const updateSnapshot = (next: SettingsScopeSnapshot<OpenCodeGoSettingsView>): void => {
+    if (closed) return
+    snapshot = next
+    listeners.forEach(listener => { listener() })
+  }
   const picker = new OpenCodeGoModelPickerController()
+  const account = { state: 'unknown' as 'connected' | 'configured' | 'unconnected' | 'unknown' }
+  let accountEpoch = 0
+  const publishAccount = (state: typeof account.state): void => {
+    if (closed || account.state === state) return
+    account.state = state
+    try { ctx.get('providerDirectory')?.update(OPENCODE_GO_SETTINGS_NAMESPACE) } catch { /* providerDirectory is optional in lab */ }
+  }
   const connection: ConnectionHandle = ctx.reflect.get('connection')
   const { rpc } = connection
 
   const readManagement = async (): Promise<void> => {
+    const epoch = accountEpoch
     const result = await callPlugin(OPENCODE_GO_SETTINGS_READ_ENDPOINT, {})
     if (!result.ok) { updateSnapshot({ ...snapshot, status: 'unavailable' }); throw new Error(result.error.message) }
     const decoded = decodeOpenCodeGoSettingsReadResult(result.value)
     if (decoded === undefined) { updateSnapshot({ ...snapshot, status: 'unavailable' }); throw new Error(t('requestFailed')) }
     updateSnapshot({ status: 'ready', value: decoded.settings, base: decoded.settings, user: decoded.settings, revision: decoded.revision, writable: true, mode: 'host' })
+    if (epoch === accountEpoch) publishAccount(decoded.credential.configured ? 'configured' : 'unconnected')
   }
 
   const describeCredential: OpenCodeGoPluginCardFace['describeCredential'] = async () => {
+    const epoch = accountEpoch
     const result = await callPlugin(OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT, {})
     if (!result.ok) throw new Error(result.error.message)
     const credential = result.value as { configured?: unknown, writable?: unknown }
     if (typeof credential.configured !== 'boolean' || typeof credential.writable !== 'boolean') throw new Error(t('requestFailed'))
+    if (epoch === accountEpoch) publishAccount(credential.configured ? 'configured' : 'unconnected')
     return { configured: credential.configured, writable: credential.writable }
   }
 
@@ -108,7 +124,7 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
-  void Promise.resolve().then(readManagement).catch(() => undefined)
+
 
   const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
     if (apiKey !== undefined) await storeApiKey(apiKey)
@@ -139,6 +155,11 @@ export function apply(ctx: ClientContext): void {
     const result = await callPlugin(OPENCODE_GO_CREDENTIAL_SET_ENDPOINT, { apiKey: value })
     if (!result.ok) throw new Error(result.error.message)
     ctx.get('providerDirectory')?.invalidateUsage(OPENCODE_GO_SETTINGS_NAMESPACE)
+    const credential = result.value as { configured?: unknown }
+    if (typeof credential.configured === 'boolean') {
+      accountEpoch += 1
+      publishAccount(credential.configured ? 'configured' : 'unconnected')
+    }
   }
 
   const fetchUsage: OpenCodeGoPluginCardFace['fetchUsage'] = async (request: OpenCodeGoDiscoveryRequest) => {
@@ -201,19 +222,30 @@ export function apply(ctx: ClientContext): void {
     const directory = directoryScope.providerDirectory
     if (directory === undefined) return
     directoryScope.effect(
-      () => directory.register({
-        key: OPENCODE_GO_SETTINGS_NAMESPACE,
-        name: 'OpenCode Go',
-        role: 'llm',
-        header: 'shared',
-        // The card renders the shared detail template; the settings page adds only the breadcrumb.
-        detail: 'shared',
-        usage: createOpenCodeGoUsageReader(),
-        modelCount: () => scope.getSnapshot().value?.models.length,
-      }),
+      () => {
+        const declaration = Object.assign({
+          key: OPENCODE_GO_SETTINGS_NAMESPACE,
+          name: 'OpenCode Go',
+          role: 'llm' as const,
+          header: 'shared' as const,
+          detail: 'shared' as const,
+          usage: createOpenCodeGoUsageReader(),
+          modelCount: () => scope.getSnapshot().value?.models.length,
+        }, {
+          catalogId: 'opencode-go',
+          account: () => ({ state: account.state }),
+        })
+        return directory.register(declaration as Parameters<typeof directory.register>[0])
+      },
       'dsh-llm-opencode-go: provider directory',
     )
   })
+  ctx.effect(() => {
+    void Promise.resolve().then(readManagement).catch(() => {
+      updateSnapshot({ ...scope.getSnapshot(), status: 'unavailable' })
+    })
+    return () => { closed = true }
+  }, 'dsh-llm-opencode-go: account snapshot')
   ctx.effect(() => {
     let warned = false
     const hasProvidersSection = (): boolean =>
@@ -237,5 +269,4 @@ export function apply(ctx: ClientContext): void {
       stop()
     }
   }, 'dsh-llm-providers-ui: missing owner diagnostic')
-
 }

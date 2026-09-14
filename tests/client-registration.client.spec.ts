@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenCodeGoSettingsView } from '../src/client-contract.ts'
 import {
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_SAVE_ENDPOINT,
   OPENCODE_GO_SETTINGS_READ_ENDPOINT,
 } from '../src/client-contract.ts'
@@ -78,7 +79,7 @@ class FakeSlots extends Service {
   }
 }
 
-async function bench() {
+async function bench(call = vi.fn(() => Promise.resolve({ ok: true, value: { models: [] } }))) {
   const ctx = new Context()
   await ctx.plugin(FakeSlots).await()
   const slots = ctx.get('slots') as FakeSlots
@@ -99,7 +100,7 @@ async function bench() {
       },
     },
     rpc: {
-      call: vi.fn(() => Promise.resolve({ ok: true, value: { models: [] } })),
+      call,
     },
   } as never)
   return { ctx, slots }
@@ -219,6 +220,42 @@ describe('OpenCode Go client plugin registration', () => {
     await face.saveConfiguration({ ...value, models: [{ id: 'first' }, { id: 'second' }] })
     const saves = call.mock.calls.filter(entry => entry[1] === OPENCODE_GO_SAVE_ENDPOINT)
     expect(saves.map(entry => (entry[2] as { expectedRevision: number }).expectedRevision)).toEqual([1, 2])
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('keeps a saved account when an older management read finishes later', async () => {
+    let resolveRead: (value: unknown) => void
+    const olderRead = new Promise<unknown>(resolve => { resolveRead = resolve })
+    const call = vi.fn((_channel: string, endpoint: string) => {
+      if (endpoint === OPENCODE_GO_SETTINGS_READ_ENDPOINT) return olderRead
+      if (endpoint === OPENCODE_GO_CREDENTIAL_SET_ENDPOINT) {
+        return Promise.resolve({ ok: true, value: { configured: true } })
+      }
+      return Promise.resolve({ ok: true, value: {} })
+    })
+    const { ctx, slots } = await bench(call)
+    let entry: { account(): { state: string } } | undefined
+    ctx.provide('providerDirectory', {
+      register: (next: typeof entry) => { entry = next; return () => undefined },
+      update: vi.fn(),
+      invalidateUsage: vi.fn(),
+    } as never)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    await vi.waitFor(() => {
+      expect(call).toHaveBeenCalledWith('/opencode-go', OPENCODE_GO_SETTINGS_READ_ENDPOINT, {}, expect.any(AbortSignal))
+    })
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as {
+      storeApiKey(value: string): Promise<void>
+    }
+    await face.storeApiKey('new-key')
+    expect(entry?.account().state).toBe('configured')
+    resolveRead({
+      ok: true,
+      value: { settings: value, revision: 1, credential: { configured: false, writable: true } },
+    })
+    await vi.waitFor(() => { expect(entry?.account().state).toBe('configured') })
     await fiber.dispose()
     await ctx.fiber.dispose()
   })

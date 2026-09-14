@@ -11,7 +11,6 @@ import {
 import { resetLabelOf } from './provider-chrome.tsx'
 import type { OpenCodeGoUsageView } from '../client-contract.ts'
 
-const USAGE_CACHE_KEY = 'dsh-llm-providers-ui:usage-cache'
 const VIEW_CACHE_KEY = 'dsh-llm-opencode-go:usage-view'
 let memoryView: OpenCodeGoUsageView | undefined
 
@@ -104,30 +103,17 @@ function windowsOf(view: OpenCodeGoUsageView): OpenCodeGoUsageWindowSummary[] {
   return windows
 }
 
+/**
+ * Persist a decoded usage view for this card's legacy first paint.
+ * Writes only the plugin-private view cache, never the store-owned shared quota cache.
+ * @param view - decoded Host usage snapshot.
+ */
 export function persistOpenCodeGoUsage(view: OpenCodeGoUsageView): void {
   memoryView = view
   try {
     const raw = JSON.stringify(view)
     globalThis.sessionStorage?.setItem(VIEW_CACHE_KEY, raw)
     globalThis.localStorage?.setItem(VIEW_CACHE_KEY, raw)
-  } catch { /* quota / private mode */ }
-  const windows = windowsOf(view)
-  if (windows.length === 0) return
-  const summary = {
-    providerKey: OPENCODE_GO_SETTINGS_NAMESPACE,
-    name: 'OpenCode Go',
-    status: 'ready' as const,
-    fetchedAt: view.fetchedAt,
-    windows,
-  }
-  try {
-    const raw = globalThis.localStorage?.getItem(USAGE_CACHE_KEY) ?? globalThis.sessionStorage?.getItem(USAGE_CACHE_KEY)
-    const parsed = raw === null || raw === undefined ? [] : JSON.parse(raw) as { providerKey?: string }[]
-    const list = Array.isArray(parsed) ? parsed.filter(item => item?.providerKey !== OPENCODE_GO_SETTINGS_NAMESPACE) : []
-    list.push(summary)
-    const next = JSON.stringify(list)
-    globalThis.localStorage?.setItem(USAGE_CACHE_KEY, next)
-    globalThis.sessionStorage?.setItem(USAGE_CACHE_KEY, next)
   } catch { /* quota / private mode */ }
 }
 

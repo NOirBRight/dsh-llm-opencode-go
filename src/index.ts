@@ -395,6 +395,7 @@ export function apply(ctx: Context, config: Config): void {
     settingsCtx.settings.installSection(ctx, NS, Config, config, {
       setSource: (source) => { current = source },
       onChange: ensureRegistrationFacts,
+      validate: value => { resolveAdapterOptions(value) },
     })
   })
 }
