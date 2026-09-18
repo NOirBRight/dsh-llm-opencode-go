@@ -93,4 +93,30 @@ describe('OpenCode Go usage cache', () => {
     expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)).toBeUndefined()
     expect(peekOpenCodeGoUsageView()?.weekly?.usage).toBe(0.4)
   })
+
+  it('emits ranked short labels so the shared sidebar picks the monthly window', async () => {
+    const reader = createOpenCodeGoUsageReader()
+    const read = await reader.read({
+      call: async () => ({
+        ok: true as const,
+        value: {
+          status: 'ok',
+          usage: {
+            fetchedAt: '2026-09-10T04:00:00.000Z',
+            session: { usage: 0.1, models: [] },
+            weekly: { usage: 0.2, models: [] },
+            monthly: { usage: 0.3, models: [] },
+          },
+        },
+      }),
+    } as never, false, new AbortController().signal)
+    expect(read).toMatchObject({
+      status: 'ready',
+      windows: [
+        { id: 'session', shortLabel: '5h' },
+        { id: 'weekly', shortLabel: 'W' },
+        { id: 'monthly', shortLabel: 'M' },
+      ],
+    })
+  })
 })

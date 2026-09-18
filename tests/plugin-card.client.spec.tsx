@@ -103,6 +103,28 @@ describe('OpenCodeGoPluginCard', () => {
     expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
   })
 
+  it('headlines monthly remaining when every window is present', async () => {
+    const fetchUsage = vi.fn(() => Promise.resolve({
+      kind: 'ok' as const,
+      usage: {
+        fetchedAt: '2026-08-16T00:00:00.000Z',
+        session: { usage: 0.04, models: [] },
+        weekly: { usage: 0.3, models: [] },
+        monthly: { usage: 0.01, models: [] },
+      },
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('meter', { name: en.usageMonthly }).getAttribute('aria-valuenow')).toBe('99')
+    })
+    expect(screen.queryByRole('meter', { name: en.usageSession })).toBeNull()
+    expect(screen.queryByRole('meter', { name: en.usageWeekly })).toBeNull()
+  })
+
   it('does not fetch usage until a key is stored', () => {
     const fetchUsage = vi.fn()
     render(<OpenCodeGoPluginCard {...props({ fetchUsage })} />)

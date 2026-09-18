@@ -340,19 +340,18 @@ function headlineQuota(
   t: OpenCodeGoPluginCardFace['t'],
 ): ProviderHeadlineQuota | undefined {
   const view = usage.status === 'ready' ? usage.usage : lastUsage
-  const weekly = view?.weekly
-  const monthly = view?.monthly
-  const session = view?.session
-  const window = weekly ?? monthly ?? session
-  if (window !== undefined) {
-    const label = weekly !== undefined ? t('usageWeekly') : monthly !== undefined ? t('usageMonthly') : t('usageSession')
+  const picked = (
+    view?.monthly !== undefined ? { window: view.monthly, label: t('usageMonthly') } as const
+      : view?.weekly !== undefined ? { window: view.weekly, label: t('usageWeekly') } as const
+        : view?.session !== undefined ? { window: view.session, label: t('usageSession') } as const
+          : undefined
+  )
+  if (picked !== undefined) {
+    const detail = resetDetail(picked.window.resetsAt, t)
     return {
-      label,
-      remainingPercent: remainingPercent(window.usage),
-      ...(() => {
-        const detail = resetDetail(window.resetsAt, t)
-        return detail === undefined ? {} : { detail }
-      })(),
+      label: picked.label,
+      remainingPercent: remainingPercent(picked.window.usage),
+      ...detail === undefined ? {} : { detail },
     }
   }
   if (usage.status === 'error' || usage.status === 'unsupported') return { label: t('usage') }

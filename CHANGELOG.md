@@ -1,3 +1,7 @@
+## v0.1.30
+
+Headline remaining quota is the monthly window (settings card, directory reader, and shared cache labels), not the 5-hour session.
+
 ## v0.1.29
 
 Quota cache withheld/epoch. Register catalog extras against providers-ui 0.2.9.

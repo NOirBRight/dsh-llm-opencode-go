@@ -40,14 +40,14 @@ export interface OpenCodeGoUsageReader {
 
 const WINDOWS_EN = [
   { id: 'session', label: '5-hour window', shortLabel: '5h' },
-  { id: 'weekly', label: 'Weekly window', shortLabel: 'Week' },
-  { id: 'monthly', label: 'Monthly window', shortLabel: 'Month' },
+  { id: 'weekly', label: 'Weekly window', shortLabel: 'W' },
+  { id: 'monthly', label: 'Monthly window', shortLabel: 'M' },
 ] as const
 
 const WINDOWS_ZH = [
   { id: 'session', label: '5 小时窗口', shortLabel: '5h' },
-  { id: 'weekly', label: '每周额度', shortLabel: '周' },
-  { id: 'monthly', label: '每月额度', shortLabel: '月' },
+  { id: 'weekly', label: '每周额度', shortLabel: 'W' },
+  { id: 'monthly', label: '每月额度', shortLabel: 'M' },
 ] as const
 
 function uiZh(): boolean {
