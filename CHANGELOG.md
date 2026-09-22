@@ -1,5 +1,9 @@
 ## v0.1.30
 
+## 0.1.31
+
+- Declare `webServer` on the Host `inject` list (and nested Connection scope) so settings/auth RPC mounts on DSH 0.1.6+ inject enforcement.
+
 Headline remaining quota is the monthly window (settings card, directory reader, and shared cache labels), not the 5-hour session.
 
 ## v0.1.29

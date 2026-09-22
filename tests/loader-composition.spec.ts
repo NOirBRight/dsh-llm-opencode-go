@@ -43,6 +43,7 @@ async function loadComposition(baseURL: string, model = 'glm-5.3'): Promise<Cont
   const ctx = new Context()
   context = ctx
   ctx.baseUrl = pathToFileURL(root).href + '/'
+  ctx.provide('webServer', { register: () => () => {} } as never)
   await ctx.plugin(Loader)
   ctx.loader.builtins.include = Include
   const modules = new Map<string, unknown>([

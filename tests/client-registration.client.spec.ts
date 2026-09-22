@@ -103,6 +103,7 @@ async function bench(call = vi.fn(() => Promise.resolve({ ok: true, value: { mod
       call,
     },
   } as never)
+  ctx.provide('webServer', { register: () => () => {} } as never)
   return { ctx, slots }
 }
 
@@ -210,6 +211,7 @@ describe('OpenCode Go client plugin registration', () => {
       bind: () => (key: string) => key,
     } as never)
     ctx.provide('connection', { rpc: { call } } as never)
+    ctx.provide('webServer', { register: () => () => {} } as never)
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace

@@ -95,7 +95,7 @@ export { createOpenCodeGoPiAiProfile } from './pi-ai-profile.ts'
 export type * from './types.ts'
 
 export const name = 'llm-opencode-go'
-export const inject = ['llm']
+export const inject = ['llm', 'webServer']
 
 const DEFAULT_MAX_RETRIES = 3
 const NS = OPENCODE_GO_SETTINGS_NAMESPACE
@@ -303,7 +303,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.llm.registerModelDiscovery(NS, (request, signal) => discoverModels(request, storedApiKey, fetch, signal))
 
   ctx.effect(() => {
-    const connectionFiber = ctx.inject(['connection'], (connectionCtx) => {
+    const connectionFiber = ctx.inject(['connection', 'webServer'], (connectionCtx) => {
       connectionCtx.effect(
         () => connectionCtx.connection.rpc.handle(
           OPENCODE_GO_RPC_CHANNEL,

@@ -26,6 +26,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     const handle = vi.fn((_channel: string, _handler: Handler) =>
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
+    ctx.provide('webServer', { register: () => () => {} } as never)
     ctx.provide('credentials', {
       resolve: async () => ({ value: 'stored-key' }),
     } as never)
@@ -81,6 +82,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     const handle = vi.fn((_channel: string, _handler: Handler) =>
       () => Promise.resolve())
     ctx.provide('connection', { rpc: { handle } } as never)
+    ctx.provide('webServer', { register: () => () => {} } as never)
     ctx.provide('credentials', {
       resolve: async () => ({ value: 'key' }),
     } as never)
@@ -113,6 +115,7 @@ describe('OpenCode Go rich-discovery RPC', () => {
     const remove = vi.fn(async () => undefined)
     const handle = vi.fn((_channel: string, _handler: Handler) => remove)
     ctx.provide('connection', { rpc: { handle } } as never)
+    ctx.provide('webServer', { register: () => () => {} } as never)
     ctx.provide('credentials', {
       resolve: async () => ({ value: 'key' }),
     } as never)
