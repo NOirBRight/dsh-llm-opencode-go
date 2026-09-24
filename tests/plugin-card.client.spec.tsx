@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { ProviderDetail, providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
@@ -23,7 +23,7 @@ const settings: OpenCodeGoSettingsView = {
   streamIdleTimeoutMs: 300_000,
 }
 
-function snapshot(overrides: Partial<SettingsScopeSnapshot<OpenCodeGoSettingsView>> = {}): SettingsScopeSnapshot<OpenCodeGoSettingsView> {
+function snapshot(overrides: Partial<ConfigFormSnapshot<OpenCodeGoSettingsView>> = {}): ConfigFormSnapshot<OpenCodeGoSettingsView> {
   return {
     status: 'ready',
     value: settings,

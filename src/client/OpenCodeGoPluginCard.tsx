@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {
@@ -23,7 +23,7 @@ import { useProviderQuotaCache } from 'dsh-llm-providers-ui/provider-ui'
 import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
 import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
 import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
-import { OPENCODE_GO_SETTINGS_NAMESPACE } from '../client-contract.ts'
+import { OPENCODE_GO_ENTRY_ID } from '../client-contract.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -49,8 +49,8 @@ export interface OpenCodeGoPluginCardFace {
   /** Localized card copy. */
   t: (key: OpenCodeGoSettingsKey) => string
   hooks: {
-    /** Reactive Host-owned settings section. */
-    openCodeGoSettings: SettingsScope<OpenCodeGoSettingsView>
+    /** Reactive Loader configuration form. */
+    openCodeGoSettings: ConfigForm<OpenCodeGoSettingsView>
   }
   /** Read value-free credential status for the section's reference. */
   describeCredential: () => Promise<OpenCodeGoCredentialState>
@@ -656,7 +656,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const liveQuota = headlineQuota(usage.status === 'ready' ? usage : { status: 'idle' }, undefined, t) ?? null
   const withheld = credential?.configured === false
     || usage.status === 'error' || usage.status === 'unsupported' || usage.status === 'needs-restart'
-  const headerQuota = useProviderQuotaCache(OPENCODE_GO_SETTINGS_NAMESPACE, 'OpenCode Go', liveQuota, {
+  const headerQuota = useProviderQuotaCache(OPENCODE_GO_ENTRY_ID, 'OpenCode Go', liveQuota, {
     answered: credential !== undefined,
     signedOut: credential?.configured === false,
     withheld,

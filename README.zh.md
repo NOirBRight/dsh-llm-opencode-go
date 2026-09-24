@@ -8,7 +8,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ## 兼容性
 
-宿主 `@deepseek-ai/dsh-*` 不锁定发行号：peer 为 `*` 且 optional。`devDependencies` 钉编译目标（`0.1.5-rc.1`）。Cordis 保持 `>=4.0.2 <5.0.0`。
+此源码以官方 DSH `0.1.7-alpha.2` 为目标：DSH package peer 固定为该版本，Cordis 为 `~4.0.4`，Schemastery 为 `~3.18.4`。
 
 `package.json#dsh.compatibility.dshReleases` 里的已验证宿主是证据，不是允许列表。未知的新宿主告警一次后仍按正常路径挂载。只有复现过的故障才会加入 blocklist。
 
@@ -20,7 +20,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.10/dsh-llm-providers-ui-0.2.10.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.11/dsh-llm-providers-ui-0.2.11.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.30/dsh-llm-opencode-go-0.1.30.tgz
 dsh web
@@ -28,15 +28,15 @@ dsh web
 
 软件包包含可直接使用的 `lib` artifacts。请在 profile 中与本插件一起安装 `dsh-llm-providers-ui`，由它提供共享的 LLM Providers 页面。
 
-Alpha.4 Host Connection RPC 会通过 Web trust fence 认证浏览器请求。持久化设置只对 loopback 页面开放；即使 authority 已获信任，非 loopback 页面也只在进程内保存设置。需要远程编辑时请使用 SSH 转发。
+客户端 RPC 通过经过认证的 `/api/plugin-rpc/opencode-go` Fetch 路由。物理 `/api` carrier 会在分发至插件路由前检查 Host/Origin 与 cookie 认证，并执行 body 大小限制。
 
 请在 profile 中与 `dsh-llm-providers-ui` 一起安装本插件，由 owner 枚举所有已安装的 provider 卡片。
 
 ## Web 配置
 
-打开 Settings → LLM Providers → OpenCode Go。provider 管理 RPC 只返回解码后的设置、revision 和不含值的凭据状态；API key 仅单向写入，绝不回显或记录。Connection RPC 通过 Web trust fence 认证请求，但持久化设置写入需要 loopback settings scope；浏览器在远程主机时请使用 SSH 转发。
+打开 Settings → LLM Providers → OpenCode Go。配置通过 Loader 条目 `llm-opencode-go` 的 alpha2 `ConfigForm` 读取；volatile `baseURL` 和 `models` 字段在按快照 revision 提交之前，先由经过认证的 Host 路由校验地址和模型目录。凭据状态和写入同样使用经过认证的插件 RPC；API key 只写入，不会回显或记录。
 
-卡片用一次带 revision 防护的 `llm-opencode-go` mutation 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`（只有 OpenAI 形 id），先用本地快照再叠加 live [models.dev](https://models.dev) 的 `opencode-go` 元数据补全名称、上下文、视觉和推理，因此新 id（如 `omen-alpha`）不会是空白行。
+卡片通过一次带 revision 防护的 `ConfigForm.mutate` 同时保存 API 地址和模型目录。Fetch available models 会立即打开 picker。Host 读取 `GET /zen/go/v1/models`（只有 OpenAI 形 id），先用本地快照再叠加 live [models.dev](https://models.dev) 的 `opencode-go` 元数据补全名称、上下文、视觉和推理，因此新 id（如 `omen-alpha`）不会是空白行。
 
 已配置 key 时，卡片折叠也会加载账户额度（获取模型或刷新会再拉一次）。Host 读取 `GET &lt;baseURL&gt;/usage`；5 小时 / 周 / 月剩余额度首次打开用本地缓存，再后台刷新。凭据不会传到浏览器。
 
@@ -90,7 +90,7 @@ Models 页面会列出已保存的 `opencode-go` 模型并允许选择。当前 
         api: openai-completions
 ~~~
 
-Provider route 仍是 `opencode-go`，设置命名空间仍是 `llm-opencode-go`。只有目录里的模型可以聊天。行上的 `contextWindow` 是 DSH 压缩预算。Fallback 为 262,144 tokens。
+Provider route 仍是 `opencode-go`，Loader entry id 为 `llm-opencode-go`。只有目录里的模型可以聊天。行上的 `contextWindow` 是 DSH 压缩预算。Fallback 为 262,144 tokens。
 
 ### 模型能力
 
@@ -121,7 +121,7 @@ Usage 映射成 Harness input/output。pi-ai 按 context capacity clamp maxToken
 
 ## 正式版安装（Latest）
 
-OpenCode Go models with per-model protocol routing, discovery, and usage. 正式成品按上方兼容性记录运行；发布包只包含构建后的 Host/Client 产物，不包含兄弟仓库源码、本机路径或 link:/workspace: 依赖。
+此源码树以官方 DeepSeek Harness `0.1.7-alpha.2` 为目标。此前发布的 artifact 保持不变；本次工作不会提升版本或发布新版本。
 
 LLM Providers 页面、导航和共享排序由 dsh-llm-providers-ui 独占；本插件只提供卡片、模型和 Host 路由。Web 必须先装 Owner，headless 只使用 Host 路由时可以不装 Owner。
 
@@ -129,7 +129,7 @@ Latest（Owner + 本插件；Web 必须一起装）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.10.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.11.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.30.tgz
 ~~~
@@ -138,7 +138,7 @@ dsh plugin --profile web add --force \
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.10/dsh-llm-providers-ui-0.2.10.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.11/dsh-llm-providers-ui-0.2.11.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.30/dsh-llm-opencode-go-0.1.30.tgz
 ~~~
@@ -148,7 +148,7 @@ dsh plugin --profile web add --force \
 ~~~sh
 # 更新 Owner + 本插件到 Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.10.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.11.tgz
 dsh plugin --profile web add --force \
   https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.30.tgz
 # 验证加载与版本

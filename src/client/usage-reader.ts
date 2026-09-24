@@ -4,8 +4,8 @@ import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/cli
 import {
   decodeOpenCodeGoUsageReply,
   decodeOpenCodeGoUsageView,
-  OPENCODE_GO_RPC_CHANNEL,
-  OPENCODE_GO_SETTINGS_NAMESPACE,
+  OPENCODE_GO_ENTRY_ID,
+  OPENCODE_GO_RPC_ENDPOINT,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
 import { resetLabelOf } from './provider-chrome.tsx'
@@ -119,10 +119,10 @@ export function persistOpenCodeGoUsage(view: OpenCodeGoUsageView): void {
 
 export function createOpenCodeGoUsageReader(): OpenCodeGoUsageReader {
   return {
-    providerKey: OPENCODE_GO_SETTINGS_NAMESPACE,
+    providerKey: OPENCODE_GO_ENTRY_ID,
     name: 'OpenCode Go',
     async read(rpc, _refresh, signal) {
-      const result = await rpc.call(OPENCODE_GO_RPC_CHANNEL, OPENCODE_GO_USAGE_ENDPOINT, {}, signal)
+      const result = await rpc.call('/api', OPENCODE_GO_RPC_ENDPOINT, { endpoint: OPENCODE_GO_USAGE_ENDPOINT, payload: {} }, signal)
       if (!result.ok) return { status: 'error', message: result.error.message }
       const reply = decodeOpenCodeGoUsageReply(result.value)
       if (reply === undefined) return { status: 'error', message: 'Invalid OpenCode Go usage response' }

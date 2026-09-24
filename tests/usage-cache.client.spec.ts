@@ -13,7 +13,7 @@ import {
   peekOpenCodeGoUsageView,
   persistOpenCodeGoUsage,
 } from '../src/client/usage-reader.ts'
-import { OPENCODE_GO_SETTINGS_NAMESPACE } from '../src/client-contract.ts'
+import { OPENCODE_GO_ENTRY_ID } from '../src/client-contract.ts'
 
 afterEach(() => {
   clearOpenCodeGoUsageCacheForTests()
@@ -21,7 +21,7 @@ afterEach(() => {
 })
 
 const fullShared: ProviderUsageSummary = {
-  providerKey: OPENCODE_GO_SETTINGS_NAMESPACE,
+  providerKey: OPENCODE_GO_ENTRY_ID,
   name: 'OpenCode Go',
   status: 'ready',
   fetchedAt: '2026-09-02T00:00:00.000Z',
@@ -35,7 +35,7 @@ const fullShared: ProviderUsageSummary = {
 const partialView = { fetchedAt: '2026-09-10T03:01:00.000Z', weekly: { usage: 0.2, models: [] } }
 
 function sharedWindowIds(): string[] | undefined {
-  return peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)?.windows.map(window => window.id)
+  return peekCachedUsage(OPENCODE_GO_ENTRY_ID)?.windows.map(window => window.id)
 }
 
 describe('OpenCode Go usage cache', () => {
@@ -58,7 +58,7 @@ describe('OpenCode Go usage cache', () => {
     rememberCachedUsage(fullShared)
     persistOpenCodeGoUsage(partialView)
     expect(sharedWindowIds()).toEqual(['session', 'weekly', 'monthly'])
-    expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)?.fetchedAt).toBe('2026-09-02T00:00:00.000Z')
+    expect(peekCachedUsage(OPENCODE_GO_ENTRY_ID)?.fetchedAt).toBe('2026-09-02T00:00:00.000Z')
     expect(peekOpenCodeGoUsageView()?.weekly?.usage).toBe(0.2)
 
     const reader = createOpenCodeGoUsageReader()
@@ -70,17 +70,17 @@ describe('OpenCode Go usage cache', () => {
     } as never, false, new AbortController().signal)
     expect(read.status).toBe('ready')
     expect(sharedWindowIds()).toEqual(['session', 'weekly', 'monthly'])
-    expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)?.windows).toHaveLength(3)
+    expect(peekCachedUsage(OPENCODE_GO_ENTRY_ID)?.windows).toHaveLength(3)
     expect(peekOpenCodeGoUsageView()?.weekly?.usage).toBe(0.9)
   })
 
   it('does not revive a dropped shared quota after logout invalidation', async () => {
     rememberCachedUsage(fullShared)
-    dropPersistedUsageKeys([OPENCODE_GO_SETTINGS_NAMESPACE])
-    expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)).toBeUndefined()
+    dropPersistedUsageKeys([OPENCODE_GO_ENTRY_ID])
+    expect(peekCachedUsage(OPENCODE_GO_ENTRY_ID)).toBeUndefined()
 
     persistOpenCodeGoUsage(partialView)
-    expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)).toBeUndefined()
+    expect(peekCachedUsage(OPENCODE_GO_ENTRY_ID)).toBeUndefined()
     expect(peekOpenCodeGoUsageView()?.weekly?.usage).toBe(0.2)
 
     const reader = createOpenCodeGoUsageReader()
@@ -90,7 +90,7 @@ describe('OpenCode Go usage cache', () => {
         value: { status: 'ok', usage: { fetchedAt: '2026-09-10T04:00:00.000Z', weekly: { usage: 0.4, models: [] } } },
       }),
     } as never, false, new AbortController().signal)
-    expect(peekCachedUsage(OPENCODE_GO_SETTINGS_NAMESPACE)).toBeUndefined()
+    expect(peekCachedUsage(OPENCODE_GO_ENTRY_ID)).toBeUndefined()
     expect(peekOpenCodeGoUsageView()?.weekly?.usage).toBe(0.4)
   })
 

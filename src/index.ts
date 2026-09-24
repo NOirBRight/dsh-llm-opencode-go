@@ -1,18 +1,20 @@
 /**
- * Register the opencode-go route with chat delegated to pi-ai. Completions,
- * Responses, and Messages are selected per model. Discovery and usage stay
- * native Host RPCs; keys never cross the browser.
+ * Register the OpenCode Go route with chat delegated to pi-ai. Completions,
+ * Responses, and Messages are selected per model. Discovery and usage use the
+ * authenticated Host plugin Fetch route; keys never cross the browser.
  */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context, Volatile, VolatileSnapshot } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/cordis-plugin-loader'
 import z from '@deepseek-ai/schemastery'
-import type {} from '@deepseek-ai/dsh-client-connection'
+import { clientRequestSchema } from '@deepseek-ai/dsh-client-connection'
+import type { ClientRequest, ConnectionRpcHandler, ConnectionRpcHandlerResult } from '@deepseek-ai/dsh-client-connection'
+import type {} from '@deepseek-ai/dsh-settings'
 import { assertUsableApiKey, LlmError, resolveRetryPolicy, RetryPolicySchema } from '@deepseek-ai/dsh-llm'
 import type { RetryPolicyConfig } from '@deepseek-ai/dsh-llm'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { deepEqualJson } from '@deepseek-ai/dsh-util-values'
-import type { SettingsPathOp } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { allowDshRuntime } from './compatibility.ts'
 import {
@@ -26,18 +28,16 @@ import { OPENCODE_GO_USAGE_UNSUPPORTED, readOpenCodeGoUsage } from './usage.ts'
 import {
   decodeOpenCodeGoCredentialSetRequest,
   decodeOpenCodeGoDiscoveryRequest,
-  decodeOpenCodeGoSaveRequest,
-  decodeOpenCodeGoSettings,
+  decodeOpenCodeGoValidationRequest,
   DEFAULT_API_KEY_ENV,
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
+  OPENCODE_GO_ENTRY_ID,
   OPENCODE_GO_PROVIDER,
-  OPENCODE_GO_RPC_CHANNEL,
-  OPENCODE_GO_SAVE_ENDPOINT,
-  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
-  OPENCODE_GO_SETTINGS_NAMESPACE,
+  OPENCODE_GO_RPC_ENDPOINT,
   OPENCODE_GO_USAGE_ENDPOINT,
+  OPENCODE_GO_VALIDATE_ENDPOINT,
 } from './client-contract.ts'
 
 export {
@@ -61,21 +61,17 @@ export {
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_DISCOVER_ENDPOINT,
+  OPENCODE_GO_ENTRY_ID,
   OPENCODE_GO_PROVIDER,
   OPENCODE_GO_PUBLIC_BASE_URL,
-  OPENCODE_GO_RPC_CHANNEL,
-  OPENCODE_GO_SAVE_ENDPOINT,
-  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
-  OPENCODE_GO_SETTINGS_NAMESPACE,
+  OPENCODE_GO_RPC_ENDPOINT,
   OPENCODE_GO_USAGE_ENDPOINT,
+  OPENCODE_GO_VALIDATE_ENDPOINT,
   decodeOpenCodeGoCatalogModel,
   decodeOpenCodeGoCredentialSetRequest,
   decodeOpenCodeGoDiscoveryRequest,
   decodeOpenCodeGoDiscoveryResult,
-  decodeOpenCodeGoSettingsReadResult,
-  decodeOpenCodeGoSaveRequest,
-  decodeOpenCodeGoSaveResult,
-  decodeOpenCodeGoSettings,
+  decodeOpenCodeGoValidationRequest,
   decodeOpenCodeGoUsageReply,
 } from './client-contract.ts'
 export type {
@@ -83,7 +79,6 @@ export type {
   OpenCodeGoCatalogModelConfig,
   OpenCodeGoDiscoveryRequest,
   OpenCodeGoDiscoveryResult,
-  OpenCodeGoSaveRequest,
   OpenCodeGoSaveResult,
   OpenCodeGoSettingsView,
   OpenCodeGoUsageModelCount,
@@ -98,12 +93,22 @@ export const name = 'llm-opencode-go'
 export const inject = ['llm', 'webServer']
 
 const DEFAULT_MAX_RETRIES = 3
-const NS = OPENCODE_GO_SETTINGS_NAMESPACE
+const ENTRY_ID = OPENCODE_GO_ENTRY_ID
 
 export interface Config {
+  apiKeyEnv: string
+  baseURL: Volatile<string>
+  models: Volatile<OpenCodeGoCatalogModel[]>
+  maxTokens?: number
+  defaultContextWindow: number
+  streamIdleTimeoutMs: number
+  retryPolicy?: RetryPolicyConfig
+}
+
+interface ConfigValues {
   apiKeyEnv?: string
   baseURL?: string
-  models?: OpenCodeGoCatalogModel[]
+  models?: VolatileSnapshot<OpenCodeGoCatalogModel[]>
   maxTokens?: number
   defaultContextWindow?: number
   streamIdleTimeoutMs?: number
@@ -114,29 +119,28 @@ const catalogModel: z<OpenCodeGoCatalogModel> = z.object({
   id: z.string().required(),
   name: z.string(),
   description: z.string(),
-  contextWindow: z.number().step(1).min(1),
-  maxTokens: z.number().step(1).min(1),
+  contextWindow: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER),
+  maxTokens: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER),
   vision: z.boolean(),
   thinking: z.boolean(),
-  defaultEffort: z.string(),
-  thinkingEfforts: z.array(z.string()),
+  defaultEffort: z.string().min(1),
+  thinkingEfforts: z.array(z.string().min(1)),
   api: z.union(['openai-completions', 'openai-responses', 'anthropic-messages']),
   tools: z.boolean(),
 })
 
-export const Config: z<Config> = z.object({
-  apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
-  baseURL: z.string().default(PUBLIC_BASE_URL),
-  models: z.array(catalogModel).default([]),
-  maxTokens: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER),
-  defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW),
+export const Config = z.object({
+  apiKeyEnv: z.string().pattern(/^[A-Za-z_][A-Za-z0-9_]*$/u).role('credential-ref').default(DEFAULT_API_KEY_ENV),
+  baseURL: z.string().default(PUBLIC_BASE_URL).volatile(),
+  models: z.array(catalogModel).default([]).volatile(),
+  defaultContextWindow: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER).default(DEFAULT_CONTEXT_WINDOW),
   streamIdleTimeoutMs: z.number().min(Number.MIN_VALUE).max(MAX_TIMER_DELAY_MS).default(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
   retryPolicy: RetryPolicySchema,
 })
 
 export type ResolvedOpenCodeGoOptions = OpenCodeGoConnectionOptions
 
-function resolveModels(models: readonly OpenCodeGoCatalogModel[] | undefined): OpenCodeGoCatalogModel[] {
+function resolveModels(models: VolatileSnapshot<OpenCodeGoCatalogModel[]> | undefined): OpenCodeGoCatalogModel[] {
   const seen = new Set<string>()
   return (models ?? []).map((model) => {
     if (model.id.length === 0) throw new Error('llm-opencode-go: catalog model ids must be non-empty')
@@ -160,7 +164,7 @@ function resolveModels(models: readonly OpenCodeGoCatalogModel[] | undefined): O
       ...(model.vision === undefined ? {} : { vision: model.vision }),
       ...(model.thinking === undefined ? {} : { thinking: model.thinking }),
       ...(model.defaultEffort === undefined ? {} : { defaultEffort: model.defaultEffort }),
-      ...(model.thinkingEfforts === undefined ? {} : { thinkingEfforts: model.thinkingEfforts }),
+      ...(model.thinkingEfforts === undefined ? {} : { thinkingEfforts: [...model.thinkingEfforts] }),
       ...(model.api === undefined ? {} : { api: model.api }),
       ...(model.tools === undefined ? {} : { tools: model.tools }),
     }
@@ -176,7 +180,7 @@ function validHTTPURL(value: string, field: string): string {
   return value.replace(/\/+$/u, '')
 }
 
-export function resolveAdapterOptions(config: Config): OpenCodeGoConnectionOptions {
+export function resolveAdapterOptions(config: ConfigValues): OpenCodeGoConnectionOptions {
   const defaultContextWindow = config.defaultContextWindow ?? DEFAULT_CONTEXT_WINDOW
   const streamIdleTimeoutMs = config.streamIdleTimeoutMs ?? DEFAULT_STREAM_IDLE_TIMEOUT_MS
   if (!Number.isSafeInteger(defaultContextWindow) || defaultContextWindow <= 0) {
@@ -205,7 +209,7 @@ function discoveryFailure(message: string, baseURL?: string) {
     error: {
       code: 'model-discovery-failed' as const,
       message,
-      details: { settingsNs: OPENCODE_GO_SETTINGS_NAMESPACE, ...(baseURL === undefined ? {} : { baseURL }) },
+      details: { settingsNs: ENTRY_ID, ...(baseURL === undefined ? {} : { baseURL }) },
     },
   }
 }
@@ -222,30 +226,39 @@ function usageFailure(error: unknown) {
   return settingsFailure(message)
 }
 
+function responseForRpc(rpcId: ClientRequest['rpcId'], result: ConnectionRpcHandlerResult): Response {
+  if (!result.ok) return Response.json({ type: 'server-response', rpcId, result })
+  const { attachments, ...success } = result
+  const body = { type: 'server-response', rpcId, result: success }
+  if (attachments === undefined || attachments.length === 0) return Response.json(body)
+  const parts = new FormData()
+  const attachmentMetadata = attachments.map((attachment, index) => {
+    const part = 'bytes-' + index
+    parts.set(part, new Blob([new Uint8Array(attachment.bytes)]))
+    return { path: [...attachment.path], codec: 'bytes', part }
+  })
+  parts.set('metadata', JSON.stringify({ ...body, attachments: attachmentMetadata }))
+  return new Response(parts)
+}
+
 export function apply(ctx: Context, config: Config): void {
   if (!allowDshRuntime(ctx.logger, 'dsh-llm-opencode-go', ['@deepseek-ai/dsh-llm'])) return
 
   if (Object.hasOwn(config, 'remoteManagement')) {
-    throw new Error('llm-opencode-go: remoteManagement is unsupported by the Alpha.4 Host RPC; remove it from the plugin config')
+    throw new Error('llm-opencode-go: remoteManagement is unsupported by the alpha2 Host Fetch route; remove it from the plugin config')
   }
-  let current: () => Config = () => config
-  let lastRaw: Config | undefined
+  let lastBaseURL: string | undefined
+  let lastModels: VolatileSnapshot<OpenCodeGoCatalogModel[]> | undefined
   let lastGood: OpenCodeGoConnectionOptions | undefined
   const options = (): OpenCodeGoConnectionOptions => {
-    const raw = current()
-    if (raw === lastRaw && lastGood !== undefined) return lastGood
-    try {
-      const next = resolveAdapterOptions(raw)
-      lastRaw = raw
-      lastGood = next
-      return next
-    } catch (error) {
-      if (lastGood === undefined) throw error
-      lastRaw = raw
-      ctx.logger.error('llm-opencode-go: keeping the last good configuration after an invalid settings section')
-      ctx.logger.error(error)
-      return lastGood
-    }
+    const baseURL = config.baseURL.get()
+    const models = config.models.get()
+    if (lastGood !== undefined && baseURL === lastBaseURL && models === lastModels) return lastGood
+    const next = resolveAdapterOptions({ ...config, baseURL, models })
+    lastBaseURL = baseURL
+    lastModels = models
+    lastGood = next
+    return next
   }
   options()
 
@@ -300,102 +313,115 @@ export function apply(ctx: Context, config: Config): void {
 
   // Host Models-page discovery may include a draft apiKey on LlmModelDiscoveryRequest.
   // The plugin browser RPC never forwards secrets; it only uses storedApiKey.
-  ctx.llm.registerModelDiscovery(NS, (request, signal) => discoverModels(request, storedApiKey, fetch, signal))
+  ctx.llm.registerModelDiscovery(OPENCODE_GO_ENTRY_ID, (request, signal) => discoverModels(request, storedApiKey, fetch, signal))
 
   ctx.effect(() => {
     const connectionFiber = ctx.inject(['connection', 'webServer'], (connectionCtx) => {
+      const handler: ConnectionRpcHandler = async (endpoint, payload, signal) => {
+        if (endpoint === OPENCODE_GO_VALIDATE_ENDPOINT) {
+          const request = decodeOpenCodeGoValidationRequest(payload)
+          if (request === undefined) return settingsFailure('invalid OpenCode Go settings request')
+          try {
+            resolveAdapterOptions({ ...config, ...request })
+            return { ok: true as const, value: {} }
+          } catch (error: unknown) {
+            return settingsFailure(error instanceof Error ? error.message : 'OpenCode Go settings are invalid')
+          }
+        }
+        if (endpoint === OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT) {
+          return { ok: true as const, value: await credentialStatus() }
+        }
+        if (endpoint === OPENCODE_GO_CREDENTIAL_SET_ENDPOINT) {
+          const request = decodeOpenCodeGoCredentialSetRequest(payload)
+          if (request === undefined) return settingsFailure('invalid OpenCode Go credential request')
+          const credentials = ctx.get('credentials')
+          if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
+          await credentials.set(options().apiKeyEnv, request.apiKey)
+          return { ok: true as const, value: await credentialStatus() }
+        }
+        if (endpoint === OPENCODE_GO_DISCOVER_ENDPOINT) {
+          const request = decodeOpenCodeGoDiscoveryRequest(payload)
+          if (request === undefined) return discoveryFailure('invalid OpenCode Go discovery request')
+          try {
+            const models = await discoverModels(
+              { ...(request.baseURL === undefined ? {} : { baseURL: request.baseURL }) },
+              storedApiKey,
+              fetch,
+              signal,
+            )
+            return { ok: true as const, value: { models } }
+          } catch (error: unknown) {
+            const message = error instanceof LlmError ? error.message : 'OpenCode Go model discovery failed'
+            return discoveryFailure(message, request.baseURL)
+          }
+        }
+        if (endpoint === OPENCODE_GO_USAGE_ENDPOINT) {
+          const request = decodeOpenCodeGoDiscoveryRequest(payload)
+          if (request === undefined) return settingsFailure('invalid OpenCode Go usage request')
+          try {
+            const usage = await readOpenCodeGoUsage(
+              { ...(request.baseURL === undefined ? {} : { baseURL: request.baseURL }), signal },
+              storedApiKey,
+            )
+            return { ok: true as const, value: { status: 'ok' as const, usage } }
+          } catch (error: unknown) {
+            return usageFailure(error)
+          }
+        }
+        return settingsFailure('unknown OpenCode Go endpoint: ' + endpoint)
+      }
       connectionCtx.effect(
-        () => connectionCtx.connection.rpc.handle(
-          OPENCODE_GO_RPC_CHANNEL,
-          async (endpoint, payload, signal) => {
-            if (endpoint === OPENCODE_GO_SETTINGS_READ_ENDPOINT) {
-              const descriptor = ctx.get('settings')?.describe().find(item => item.ns === NS)
-              const settings = decodeOpenCodeGoSettings(descriptor?.value)
-              if (descriptor === undefined || settings === undefined) return settingsFailure('OpenCode Go settings are unavailable')
-              return { ok: true as const, value: { settings, revision: descriptor.revision, credential: await credentialStatus() } }
+        () => connectionCtx.connection.fetch.register({
+          path: '/api/' + OPENCODE_GO_RPC_ENDPOINT,
+          methods: ['POST'],
+          requestBody: 'buffered',
+          fetch: async (request) => {
+            const contentType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
+            if (contentType !== 'application/json') return new Response('content type must be application/json', { status: 415 })
+            let body: unknown
+            try {
+              body = await request.json()
+            } catch {
+              return new Response('body is not JSON', { status: 400 })
             }
-            if (endpoint === OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT) {
-              return { ok: true as const, value: await credentialStatus() }
+            const parsed = clientRequestSchema.safeParse(body)
+            if (!parsed.success || parsed.data.method !== OPENCODE_GO_RPC_ENDPOINT) {
+              return new Response('invalid OpenCode Go plugin RPC request', { status: 400 })
             }
-            if (endpoint === OPENCODE_GO_CREDENTIAL_SET_ENDPOINT) {
-              const request = decodeOpenCodeGoCredentialSetRequest(payload)
-              if (request === undefined) return settingsFailure('invalid OpenCode Go credential request')
-              const credentials = ctx.get('credentials')
-              if (credentials === undefined) return settingsFailure('OpenCode Go credentials are unavailable')
-              await credentials.set(options().apiKeyEnv, request.apiKey)
-              return { ok: true as const, value: await credentialStatus() }
+            const wrapped = parsed.data.payload
+            if (typeof wrapped !== 'object' || wrapped === null || Array.isArray(wrapped)) {
+              return new Response('invalid OpenCode Go plugin RPC payload', { status: 400 })
             }
-            if (endpoint === OPENCODE_GO_DISCOVER_ENDPOINT) {
-              const request = decodeOpenCodeGoDiscoveryRequest(payload)
-              if (request === undefined) return discoveryFailure('invalid OpenCode Go discovery request')
-              try {
-                const models = await discoverModels(
-                  { ...(request.baseURL === undefined ? {} : { baseURL: request.baseURL }) },
-                  storedApiKey,
-                  fetch,
-                  signal,
-                )
-                return { ok: true as const, value: { models } }
-              } catch (error: unknown) {
-                const message = error instanceof LlmError ? error.message : 'OpenCode Go model discovery failed'
-                return discoveryFailure(message, request.baseURL)
-              }
+            if (!('endpoint' in wrapped) || typeof wrapped.endpoint !== 'string') {
+              return new Response('invalid OpenCode Go plugin RPC payload', { status: 400 })
             }
-            if (endpoint === OPENCODE_GO_SAVE_ENDPOINT) {
-              const request = decodeOpenCodeGoSaveRequest(payload)
-              if (request === undefined) return settingsFailure('invalid OpenCode Go settings request')
-              const settings = ctx.get('settings')
-              if (settings === undefined) return settingsFailure('OpenCode Go settings are unavailable')
-              try {
-                const before = settings.describe().find(descriptor => descriptor.ns === NS)
-                if (before === undefined) return settingsFailure('OpenCode Go settings are unavailable')
-                const currentSettings = decodeOpenCodeGoSettings(before.value)
-                if (currentSettings === undefined) return settingsFailure('OpenCode Go settings are invalid')
-                const ops: SettingsPathOp[] = []
-                if (!deepEqualJson(currentSettings.baseURL, request.baseURL)) {
-                  ops.push({ op: 'set', path: ['baseURL'], value: request.baseURL })
-                }
-                if (!deepEqualJson(currentSettings.models, request.models)) {
-                  ops.push({ op: 'set', path: ['models'], value: request.models })
-                }
-                if (ops.length > 0) await settings.mutate(NS, ops, request.expectedRevision)
-                const accepted = settings.describe().find(descriptor => descriptor.ns === NS)
-                const acceptedSettings = decodeOpenCodeGoSettings(accepted?.value)
-                if (accepted === undefined || acceptedSettings === undefined) {
-                  return settingsFailure('OpenCode Go settings could not be reloaded')
-                }
-                return { ok: true as const, value: { settings: acceptedSettings, revision: accepted.revision } }
-              } catch (error: unknown) {
-                const message = error instanceof Error && error.message.length > 0 ? error.message : 'OpenCode Go settings save failed'
-                return settingsFailure(message)
-              }
+            const endpoint = wrapped.endpoint
+            const payload = 'payload' in wrapped ? wrapped.payload : undefined
+            try {
+              const result = await handler(
+                endpoint,
+                payload,
+                request.signal,
+                connectionCtx.connection.operator,
+              )
+              return responseForRpc(parsed.data.rpcId, result)
+            } catch {
+              return new Response('OpenCode Go plugin RPC handler failure', { status: 500 })
             }
-            if (endpoint === OPENCODE_GO_USAGE_ENDPOINT) {
-              const request = decodeOpenCodeGoDiscoveryRequest(payload)
-              if (request === undefined) return settingsFailure('invalid OpenCode Go usage request')
-              try {
-                const usage = await readOpenCodeGoUsage(
-                  { ...(request.baseURL === undefined ? {} : { baseURL: request.baseURL }), signal },
-                  storedApiKey,
-                )
-                return { ok: true as const, value: { status: 'ok' as const, usage } }
-              } catch (error: unknown) {
-                return usageFailure(error)
-              }
-            }
-            return settingsFailure('unknown OpenCode Go endpoint: ' + endpoint)
           },
-        ),
-        'llm-opencode-go: RPC channel',
+        }),
+        'llm-opencode-go: authenticated plugin RPC route',
       )
     })
     return connectionFiber.dispose
-  }, 'llm-opencode-go: connection RPC injection')
+  }, 'llm-opencode-go: connection Fetch injection')
+  ctx.on('loader/volatile-update', paths => {
+    if (paths.some(path => path[0] === 'baseURL' || path[0] === 'models')) ensureRegistrationFacts()
+  })
   ctx.inject(['settings'], (settingsCtx) => {
-    settingsCtx.settings.installSection(ctx, NS, Config, config, {
-      setSource: (source) => { current = source },
-      onChange: ensureRegistrationFacts,
-      validate: value => { resolveAdapterOptions(value) },
-    })
+    settingsCtx.effect(
+      () => settingsCtx.settings.configure({ auto: false }, ctx.fiber),
+      'llm-opencode-go: disable generated settings page',
+    )
   })
 }

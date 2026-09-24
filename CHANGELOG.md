@@ -1,3 +1,8 @@
+## Unreleased
+
+- Migrate the Host and Client integration to official DSH `0.1.7-alpha.2` APIs. Plugin RPC now uses the authenticated buffered `/api/plugin-rpc/opencode-go` Fetch route; editable `baseURL` and `models` use the Loader Config schema and revision-fenced `ConfigForm`.
+- Keep Loader Config defaults serializable so the provider detail renders before login; validate edited URLs and model catalogs through the authenticated Host route before revision-fenced ConfigForm mutation.
+
 ## v0.1.30
 
 ## 0.1.31
