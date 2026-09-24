@@ -56,8 +56,8 @@ export interface OpenCodeGoPluginCardFace {
   describeCredential: () => Promise<OpenCodeGoCredentialState>
   /** Persist a typed key through the credentials API before Host reads. */
   storeApiKey: (apiKey: string) => Promise<void>
-  /** Atomically store changed settings and return the accepted Host snapshot. */
-  saveConfiguration: (settings: OpenCodeGoSettingsView, apiKey?: string) => Promise<OpenCodeGoSaveResult>
+  /** Atomically save against the draft's original form revision; apiKey is optional. */
+  saveConfiguration: (settings: OpenCodeGoSettingsView, sourceRevision: number, apiKey?: string) => Promise<OpenCodeGoSaveResult>
   /** Ask Host to list models using the stored credential. */
   discoverModels: (request: OpenCodeGoDiscoveryRequest) => Promise<readonly OpenCodeGoCatalogModelConfig[]>
   /** Ask Host to read usage using the stored credential. */
@@ -624,13 +624,13 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
 
   const save = async (): Promise<void> => {
-    if (draft === undefined || snapshot.value === undefined || invalid) return
+    if (draft === undefined || snapshot.value === undefined || sourceRevision === undefined || invalid) return
     setBusy(true)
     setFailure(undefined)
     setNotice(undefined)
     try {
       const settings = settingsOf(draft, snapshot.value)
-      const accepted = await props.saveConfiguration(settings, apiKey.trim().length === 0 ? undefined : apiKey.trim())
+      const accepted = await props.saveConfiguration(settings, sourceRevision, apiKey.trim().length === 0 ? undefined : apiKey.trim())
       const next = draftOf(accepted.settings)
       setSource(next)
       setDraft(next)

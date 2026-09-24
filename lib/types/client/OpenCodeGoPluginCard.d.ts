@@ -37,8 +37,8 @@ export interface OpenCodeGoPluginCardFace {
     describeCredential: () => Promise<OpenCodeGoCredentialState>;
     /** Persist a typed key through the credentials API before Host reads. */
     storeApiKey: (apiKey: string) => Promise<void>;
-    /** Atomically store changed settings and return the accepted Host snapshot. */
-    saveConfiguration: (settings: OpenCodeGoSettingsView, apiKey?: string) => Promise<OpenCodeGoSaveResult>;
+    /** Atomically save against the draft's original form revision; apiKey is optional. */
+    saveConfiguration: (settings: OpenCodeGoSettingsView, sourceRevision: number, apiKey?: string) => Promise<OpenCodeGoSaveResult>;
     /** Ask Host to list models using the stored credential. */
     discoverModels: (request: OpenCodeGoDiscoveryRequest) => Promise<readonly OpenCodeGoCatalogModelConfig[]>;
     /** Ask Host to read usage using the stored credential. */

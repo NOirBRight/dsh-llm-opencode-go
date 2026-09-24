@@ -99,10 +99,14 @@ export function apply(ctx: ClientContext): void {
     }
   }
 
-  const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, apiKey) => {
+  const saveConfiguration: OpenCodeGoPluginCardFace['saveConfiguration'] = async (settings, sourceRevision, apiKey) => {
+    const source = openCodeGoSettings.getSnapshot()
+    if (source.status !== 'ready' || source.value === undefined || source.revision !== sourceRevision || !source.writable) {
+      throw new Error(t('requestFailed'))
+    }
     if (apiKey !== undefined) await storeApiKey(apiKey)
     const current = openCodeGoSettings.getSnapshot()
-    if (current.status !== 'ready' || current.value === undefined || current.revision === undefined || !current.writable) {
+    if (current.status !== 'ready' || current.value === undefined || current.revision !== sourceRevision || !current.writable) {
       throw new Error(t('requestFailed'))
     }
     const ops: SettingsPathOpView[] = []
@@ -116,9 +120,11 @@ export function apply(ctx: ClientContext): void {
     if (ops.length > 0) {
       const checked = await callPlugin(OPENCODE_GO_VALIDATE_ENDPOINT, { baseURL: settings.baseURL, models: settings.models })
       if (!checked.ok) throw new Error(checked.error.message)
-    }
-    if (ops.length > 0 && !await openCodeGoSettings.mutate(ops, current.revision)) {
-      throw new Error(t('requestFailed'))
+      const latest = openCodeGoSettings.getSnapshot()
+      if (latest.status !== 'ready' || latest.value === undefined || latest.revision !== sourceRevision || !latest.writable) {
+        throw new Error(t('requestFailed'))
+      }
+      if (!await openCodeGoSettings.mutate(ops, sourceRevision)) throw new Error(t('requestFailed'))
     }
     const accepted = openCodeGoSettings.getSnapshot()
     if (accepted.value === undefined || accepted.revision === undefined) throw new Error(t('requestFailed'))
