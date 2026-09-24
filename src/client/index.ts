@@ -104,7 +104,6 @@ export function apply(ctx: ClientContext): void {
     if (source.status !== 'ready' || source.value === undefined || source.revision !== sourceRevision || !source.writable) {
       throw new Error(t('requestFailed'))
     }
-    if (apiKey !== undefined) await storeApiKey(apiKey)
     const current = openCodeGoSettings.getSnapshot()
     if (current.status !== 'ready' || current.value === undefined || current.revision !== sourceRevision || !current.writable) {
       throw new Error(t('requestFailed'))
@@ -120,14 +119,17 @@ export function apply(ctx: ClientContext): void {
     if (ops.length > 0) {
       const checked = await callPlugin(OPENCODE_GO_VALIDATE_ENDPOINT, { baseURL: settings.baseURL, models: settings.models })
       if (!checked.ok) throw new Error(checked.error.message)
-      const latest = openCodeGoSettings.getSnapshot()
-      if (latest.status !== 'ready' || latest.value === undefined || latest.revision !== sourceRevision || !latest.writable) {
-        throw new Error(t('requestFailed'))
-      }
+    }
+    const latest = openCodeGoSettings.getSnapshot()
+    if (latest.status !== 'ready' || latest.value === undefined || latest.revision !== sourceRevision || !latest.writable) {
+      throw new Error(t('requestFailed'))
+    }
+    if (ops.length > 0 || apiKey !== undefined) {
       if (!await openCodeGoSettings.mutate(ops, sourceRevision)) throw new Error(t('requestFailed'))
     }
     const accepted = openCodeGoSettings.getSnapshot()
     if (accepted.value === undefined || accepted.revision === undefined) throw new Error(t('requestFailed'))
+    if (apiKey !== undefined) await storeApiKey(apiKey)
     return { settings: accepted.value, revision: accepted.revision }
   }
 

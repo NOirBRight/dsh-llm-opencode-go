@@ -8,6 +8,7 @@ import {
   OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
   OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
   OPENCODE_GO_ENTRY_ID,
+  OPENCODE_GO_VALIDATE_ENDPOINT,
   OPENCODE_GO_RPC_ENDPOINT,
 } from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
@@ -233,6 +234,42 @@ describe('OpenCode Go client plugin registration', () => {
       expect.any(AbortSignal),
     )
 
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('does not store a key when another tab saves during asynchronous settings validation', async () => {
+    let completeValidation!: () => void
+    const validation = new Promise<void>(resolve => { completeValidation = resolve })
+    const call = vi.fn((_carrier: string, _method: string, wrapped: unknown) => {
+      const endpoint = typeof wrapped === 'object' && wrapped !== null && 'endpoint' in wrapped
+        ? wrapped.endpoint
+        : undefined
+      if (endpoint === OPENCODE_GO_VALIDATE_ENDPOINT) {
+        return validation.then(() => ({ ok: true, value: {} }))
+      }
+      return Promise.resolve({ ok: true, value: {} })
+    })
+    const openCodeGoSettings = configForm()
+    const { ctx, slots } = await bench(call, openCodeGoSettings)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
+    const staleSave = face.saveConfiguration({ ...value, models: [{ id: 'stale-model' }] }, 1, 'stale-key')
+    await vi.waitFor(() => expect(call).toHaveBeenCalledWith(
+      '/api', OPENCODE_GO_RPC_ENDPOINT,
+      expect.objectContaining({ endpoint: OPENCODE_GO_VALIDATE_ENDPOINT }),
+      expect.any(AbortSignal),
+    ))
+    await openCodeGoSettings.mutate([{ op: 'set', path: ['models'], value: [{ id: 'other-tab-model' }] }], 1)
+    completeValidation()
+    await expect(staleSave).rejects.toThrow()
+    expect(openCodeGoSettings.getSnapshot().value?.models).toEqual([{ id: 'other-tab-model' }])
+    expect(call).not.toHaveBeenCalledWith(
+      '/api', OPENCODE_GO_RPC_ENDPOINT,
+      expect.objectContaining({ endpoint: OPENCODE_GO_CREDENTIAL_SET_ENDPOINT }),
+      expect.any(AbortSignal),
+    )
     await fiber.dispose()
     await ctx.fiber.dispose()
   })
