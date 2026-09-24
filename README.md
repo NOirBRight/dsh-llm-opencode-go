@@ -8,9 +8,9 @@ The package root exposes the Cordis plugin contract and OpenCodeGoAdapter. The s
 
 ## Compatibility
 
-This source targets official DSH `0.1.7-alpha.2`: DSH package peers are pinned to that release, with Cordis `~4.0.4` and Schemastery `~3.18.4`.
+DSH peer and development dependency ranges accept `0.1.7-alpha.2` and later releases. Cordis peers accept `>=4.0.4 <5.0.0`; Schemastery peers target `~3.18.4`.
 
-The compatibility metadata identifies the exact alpha2 target; unknown Hosts still warn once and use the normal best-effort mount path. Only a reproduced failure is blocklisted.
+Compatibility metadata records verified Hosts; other Hosts still warn once and use the normal best-effort mount path. Only a reproduced failure is blocklisted.
 
 `catalogId` and the unresolved `unknown` account state are attached at runtime. Published `dsh-llm-providers-ui` 0.2.8 omits those fields and treats `unknown` as unconnected; they only take effect on a newer Owner.
 
@@ -30,9 +30,9 @@ Install the published package through the profile manager:
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.13/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz
 dsh web
 ~~~
 
@@ -122,7 +122,7 @@ Usage maps to Harness input/output counts. maxTokens is clamped against the conf
 
 ## Release installation (Latest)
 
-This release targets official DeepSeek Harness `0.1.7-alpha.2`; use the matching published Provider UI `0.2.12` release on Web.
+This release targets official DeepSeek Harness `0.1.7-rc.1`; use the matching published Provider UI `0.2.13` release on Web.
 
 The dsh-llm-providers-ui package owns the LLM Providers page, navigation, and shared order store. This package owns only its provider card, models, credentials, and Host route. Install the Owner first for Web; headless Host routing works without the Owner.
 
@@ -130,18 +130,18 @@ Latest (Owner + this plugin; required together on Web):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.33.tgz
 ~~~
 
 Fixed versions (reproducible):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.13/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -149,9 +149,9 @@ Update, uninstall, and verify:
 ~~~sh
 # Update Owner + this plugin to Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.33.tgz
 # Verify the loaded version
 dsh plugin --profile web list
 dsh plugin --profile web doctor
@@ -163,4 +163,4 @@ Configuration: use the plugin section in Settings for Web UI plugins, or the pro
 
 Rollback: restore the previous Host release and matching profile together; older OpenCode Go releases are not compatible with this Alpha.2 Host. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.32](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.32) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz.sha256).
+Release and integrity: [v0.1.33](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.33) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz.sha256).

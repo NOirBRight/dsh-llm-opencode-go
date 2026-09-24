@@ -1,3 +1,7 @@
+## v0.1.33
+
+- Verify compatibility with official DeepSeek Harness `0.1.7-rc.1` and accept DSH package versions from `0.1.7-alpha.2` onward.
+
 ## Unreleased
 
 - Migrate the Host and Client integration to official DSH `0.1.7-alpha.2` APIs. Plugin RPC now uses the authenticated buffered `/api/plugin-rpc/opencode-go` Fetch route; editable `baseURL` and `models` use the Loader Config schema and revision-fenced `ConfigForm`.

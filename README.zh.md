@@ -8,7 +8,7 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ## 兼容性
 
-此源码以官方 DSH `0.1.7-alpha.2` 为目标：DSH package peer 固定为该版本，Cordis 为 `~4.0.4`，Schemastery 为 `~3.18.4`。
+DSH peer 和开发依赖范围接受 `0.1.7-alpha.2` 及之后的发行版。Cordis peer 接受 `>=4.0.4 <5.0.0`；Schemastery peer 面向 `~3.18.4`。
 
 `package.json#dsh.compatibility.dshReleases` 里的已验证宿主是证据，不是允许列表。未知的新宿主告警一次后仍按正常路径挂载。只有复现过的故障才会加入 blocklist。
 
@@ -20,9 +20,9 @@ DeepSeek Harness 的 OpenCode Go 集成。聊天走共享 PiAiAdapter，按官�
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.13/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz
 dsh web
 ~~~
 
@@ -121,7 +121,7 @@ Usage 映射成 Harness input/output。pi-ai 按 context capacity clamp maxToken
 
 ## 正式版安装（Latest）
 
-此版本面向官方 DeepSeek Harness `0.1.7-alpha.2`；Web 请同时安装已发布的 Provider UI `0.2.12`。
+此版本面向官方 DeepSeek Harness `0.1.7-rc.1`；Web 请同时安装已发布的 Provider UI `0.2.13`。
 
 LLM Providers 页面、导航和共享排序由 dsh-llm-providers-ui 独占；本插件只提供卡片、模型和 Host 路由。Web 必须先装 Owner，headless 只使用 Host 路由时可以不装 Owner。
 
@@ -129,18 +129,18 @@ Latest（Owner + 本插件；Web 必须一起装）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.33.tgz
 ~~~
 
 固定版本（可复现）：
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.13/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz
 ~~~
 
 更新、卸载与验证：
@@ -148,9 +148,9 @@ dsh plugin --profile web add --force \
 ~~~sh
 # 更新 Owner + 本插件到 Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.13.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.33.tgz
 # 验证加载与版本
 dsh plugin --profile web list
 dsh plugin --profile web doctor
@@ -162,4 +162,4 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 回滚：一并恢复此前官方 Host 和配套 profile；旧版 OpenCode Go 不兼容此 Alpha.2 Host。失败时查看 journalctl --user -u dsh-web.service 与 dsh plugin --profile web doctor，不要把源码 checkout 写入 production profile。
 
-Release 与完整性：[v0.1.32](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.32) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz.sha256)。
+Release 与完整性：[v0.1.33](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.33) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.33/dsh-llm-opencode-go-0.1.33.tgz.sha256)。
