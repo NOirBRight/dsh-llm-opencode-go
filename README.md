@@ -30,9 +30,9 @@ Install the published package through the profile manager:
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.11/dsh-llm-providers-ui-0.2.11.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.30/dsh-llm-opencode-go-0.1.30.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
 dsh web
 ~~~
 
@@ -122,7 +122,7 @@ Usage maps to Harness input/output counts. maxTokens is clamped against the conf
 
 ## Release installation (Latest)
 
-This source tree targets official DeepSeek Harness `0.1.7-alpha.2`. Previously published release artifacts remain unchanged; this work does not promote or publish a new release.
+This release targets official DeepSeek Harness `0.1.7-alpha.2`; use the matching published Provider UI `0.2.12` release on Web.
 
 The dsh-llm-providers-ui package owns the LLM Providers page, navigation, and shared order store. This package owns only its provider card, models, credentials, and Host route. Install the Owner first for Web; headless Host routing works without the Owner.
 
@@ -130,18 +130,18 @@ Latest (Owner + this plugin; required together on Web):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.11.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.30.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
 ~~~
 
 Fixed versions (reproducible):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.11/dsh-llm-providers-ui-0.2.11.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.30/dsh-llm-opencode-go-0.1.30.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -149,9 +149,9 @@ Update, uninstall, and verify:
 ~~~sh
 # Update Owner + this plugin to Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.11.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.30.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
 # Verify the loaded version
 dsh plugin --profile web list
 dsh plugin --profile web doctor
@@ -161,6 +161,6 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 Configuration: use the plugin section in Settings for Web UI plugins, or the profile dsh.profile.bundles entry for Host-only plugins. Start with this README's minimal YAML/JSON example and provide credentials/backend addresses explicitly.
 
-Rollback: rerun the fixed v0.1.30 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
+Rollback: restore the previous Host release and matching profile together; older OpenCode Go releases are not compatible with this Alpha.2 Host. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.30](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.30) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.30/SHA256SUMS).
+Release and integrity: [v0.1.32](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.32) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz.sha256).
