@@ -28,6 +28,11 @@ export interface OpenCodeGoUsageReader {
 export declare function remainingPercent(used: number): number;
 export declare function clearOpenCodeGoUsageCacheForTests(): void;
 export declare function peekOpenCodeGoUsageView(): OpenCodeGoUsageView | undefined;
+/**
+ * Persist a decoded usage view for this card's legacy first paint.
+ * Writes only the plugin-private view cache, never the store-owned shared quota cache.
+ * @param view - decoded Host usage snapshot.
+ */
 export declare function persistOpenCodeGoUsage(view: OpenCodeGoUsageView): void;
 export declare function createOpenCodeGoUsageReader(): OpenCodeGoUsageReader;
 //# sourceMappingURL=usage-reader.d.ts.map

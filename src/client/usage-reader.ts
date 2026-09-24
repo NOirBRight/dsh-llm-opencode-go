@@ -4,14 +4,13 @@ import type { ClientConnectionRpc } from '@deepseek-ai/dsh-client-connection/cli
 import {
   decodeOpenCodeGoUsageReply,
   decodeOpenCodeGoUsageView,
-  OPENCODE_GO_RPC_CHANNEL,
-  OPENCODE_GO_SETTINGS_NAMESPACE,
+  OPENCODE_GO_ENTRY_ID,
+  OPENCODE_GO_RPC_ENDPOINT,
   OPENCODE_GO_USAGE_ENDPOINT,
 } from '../client-contract.ts'
 import { resetLabelOf } from './provider-chrome.tsx'
 import type { OpenCodeGoUsageView } from '../client-contract.ts'
 
-const USAGE_CACHE_KEY = 'dsh-llm-providers-ui:usage-cache'
 const VIEW_CACHE_KEY = 'dsh-llm-opencode-go:usage-view'
 let memoryView: OpenCodeGoUsageView | undefined
 
@@ -41,14 +40,14 @@ export interface OpenCodeGoUsageReader {
 
 const WINDOWS_EN = [
   { id: 'session', label: '5-hour window', shortLabel: '5h' },
-  { id: 'weekly', label: 'Weekly window', shortLabel: 'Week' },
-  { id: 'monthly', label: 'Monthly window', shortLabel: 'Month' },
+  { id: 'weekly', label: 'Weekly window', shortLabel: 'W' },
+  { id: 'monthly', label: 'Monthly window', shortLabel: 'M' },
 ] as const
 
 const WINDOWS_ZH = [
   { id: 'session', label: '5 小时窗口', shortLabel: '5h' },
-  { id: 'weekly', label: '每周额度', shortLabel: '周' },
-  { id: 'monthly', label: '每月额度', shortLabel: '月' },
+  { id: 'weekly', label: '每周额度', shortLabel: 'W' },
+  { id: 'monthly', label: '每月额度', shortLabel: 'M' },
 ] as const
 
 function uiZh(): boolean {
@@ -104,6 +103,11 @@ function windowsOf(view: OpenCodeGoUsageView): OpenCodeGoUsageWindowSummary[] {
   return windows
 }
 
+/**
+ * Persist a decoded usage view for this card's legacy first paint.
+ * Writes only the plugin-private view cache, never the store-owned shared quota cache.
+ * @param view - decoded Host usage snapshot.
+ */
 export function persistOpenCodeGoUsage(view: OpenCodeGoUsageView): void {
   memoryView = view
   try {
@@ -111,32 +115,14 @@ export function persistOpenCodeGoUsage(view: OpenCodeGoUsageView): void {
     globalThis.sessionStorage?.setItem(VIEW_CACHE_KEY, raw)
     globalThis.localStorage?.setItem(VIEW_CACHE_KEY, raw)
   } catch { /* quota / private mode */ }
-  const windows = windowsOf(view)
-  if (windows.length === 0) return
-  const summary = {
-    providerKey: OPENCODE_GO_SETTINGS_NAMESPACE,
-    name: 'OpenCode Go',
-    status: 'ready' as const,
-    fetchedAt: view.fetchedAt,
-    windows,
-  }
-  try {
-    const raw = globalThis.localStorage?.getItem(USAGE_CACHE_KEY) ?? globalThis.sessionStorage?.getItem(USAGE_CACHE_KEY)
-    const parsed = raw === null || raw === undefined ? [] : JSON.parse(raw) as { providerKey?: string }[]
-    const list = Array.isArray(parsed) ? parsed.filter(item => item?.providerKey !== OPENCODE_GO_SETTINGS_NAMESPACE) : []
-    list.push(summary)
-    const next = JSON.stringify(list)
-    globalThis.localStorage?.setItem(USAGE_CACHE_KEY, next)
-    globalThis.sessionStorage?.setItem(USAGE_CACHE_KEY, next)
-  } catch { /* quota / private mode */ }
 }
 
 export function createOpenCodeGoUsageReader(): OpenCodeGoUsageReader {
   return {
-    providerKey: OPENCODE_GO_SETTINGS_NAMESPACE,
+    providerKey: OPENCODE_GO_ENTRY_ID,
     name: 'OpenCode Go',
     async read(rpc, _refresh, signal) {
-      const result = await rpc.call(OPENCODE_GO_RPC_CHANNEL, OPENCODE_GO_USAGE_ENDPOINT, {}, signal)
+      const result = await rpc.call('/api', OPENCODE_GO_RPC_ENDPOINT, { endpoint: OPENCODE_GO_USAGE_ENDPOINT, payload: {} }, signal)
       if (!result.ok) return { status: 'error', message: result.error.message }
       const reply = decodeOpenCodeGoUsageReply(result.value)
       if (reply === undefined) return { status: 'error', message: 'Invalid OpenCode Go usage response' }

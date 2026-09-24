@@ -13,7 +13,8 @@ Chat uses the shared pi-ai-backed adapter. Each catalog model names its wire pro
     DSH GenerateOptions
       -> OpenCodeGoAdapter
       -> PiAiAdapter
-      -> POST <base>/chat/completions | /responses | /messages
+      -> Completions/Responses POST {openaiOrigin}/chat/completions|/responses
+      -> Messages POST {anthropicOrigin}/v1/messages
       -> DSH StreamChunk
 
 OpenCode Go-specific independent capabilities remain native Host calls:
@@ -25,7 +26,15 @@ This follows the Ollama plugin split: the plugin does not own a private SSE tran
 
 ## Endpoint mapping
 
-The settings section stores `https://opencode.ai/zen/go/v1`. Chat, listing, and usage all use that origin. Every request includes `x-opencode-session` (DSH session id on chat; stable ids on listing and usage).
+Settings store the OpenAI-compatible origin `https://opencode.ai/zen/go/v1`. Listing (`GET /models`) and usage (`GET /usage`) always use that origin.
+
+Chat follows the official Go endpoint table (https://opencode.ai/docs/zh-cn/go/):
+
+- Completions (GLM, Kimi, DeepSeek, MiMo, Hy3, LongCat): `POST {origin}/chat/completions`
+- Responses (Grok, GPT, Muse Spark): `POST {origin}/responses`
+- Messages (MiniMax, Qwen): `POST {anthropicOrigin}/v1/messages`, where `anthropicOrigin` is `origin` without one trailing `/v1`. The Anthropic SDK appends `/v1/messages`; the published URL is `https://opencode.ai/zen/go/v1/messages`.
+
+Every request includes `x-opencode-session` (DSH session id on chat; stable ids on listing and usage).
 
 ## Model catalog
 

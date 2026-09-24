@@ -17,8 +17,23 @@ export declare function knownModel(id: string): OpenCodeGoKnownModel | undefined
 /**
  * Infer the wire protocol from official docs, then prefix families for live-only ids.
  * Official mapping: grok/gpt/muse → Responses; MiniMax/Qwen → Messages; everything else → Completions.
+ *
+ * @see https://opencode.ai/docs/zh-cn/go/ API 端点 table
  */
 export declare function protocolForModel(id: string): OpenCodeGoApi;
+/**
+ * Chat origin for one protocol. Completions and Responses use the configured
+ * OpenAI-compatible origin (`https://opencode.ai/zen/go/v1`). Messages use the
+ * Anthropic SDK origin: that same URL without one trailing `/v1`, because the
+ * SDK posts `{base}/v1/messages` and the official table lists
+ * `https://opencode.ai/zen/go/v1/messages`.
+ *
+ * @param baseURL Settings origin, usually ending in `/zen/go/v1`.
+ * @param api Wire protocol for the selected model.
+ * @returns Origin passed to pi-ai as `model.baseUrl`.
+ * @see https://opencode.ai/docs/zh-cn/go/
+ */
+export declare function chatBaseURLForApi(baseURL: string, api: OpenCodeGoApi): string;
 /** Family used only by the picker overlay. */
 export declare function familyForModel(id: string): OpenCodeGoFamily;
 export type OpenCodeGoListedModel = {

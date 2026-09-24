@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import { ProviderDetail, providerDetailCopy } from 'dsh-llm-providers-ui/provider-detail'
 import { OpenCodeGoPluginCard } from '../src/client/OpenCodeGoPluginCard.tsx'
 import type { OpenCodeGoPluginCardProps } from '../src/client/OpenCodeGoPluginCard.tsx'
@@ -23,7 +23,7 @@ const settings: OpenCodeGoSettingsView = {
   streamIdleTimeoutMs: 300_000,
 }
 
-function snapshot(overrides: Partial<SettingsScopeSnapshot<OpenCodeGoSettingsView>> = {}): SettingsScopeSnapshot<OpenCodeGoSettingsView> {
+function snapshot(overrides: Partial<ConfigFormSnapshot<OpenCodeGoSettingsView>> = {}): ConfigFormSnapshot<OpenCodeGoSettingsView> {
   return {
     status: 'ready',
     value: settings,
@@ -44,7 +44,7 @@ function props(overrides: Partial<OpenCodeGoPluginCardProps> = {}): OpenCodeGoPl
     useOpenCodeGoSettings: selector => selector(current),
     describeCredential: vi.fn(() => Promise.resolve({ configured: false, writable: true })),
     storeApiKey: vi.fn(() => Promise.resolve()),
-    saveConfiguration: vi.fn(next => Promise.resolve({ settings: next, revision: 2 })),
+    saveConfiguration: vi.fn((next: OpenCodeGoSettingsView, sourceRevision: number) => Promise.resolve({ settings: next, revision: sourceRevision + 1 })),
     discoverModels: vi.fn(() => Promise.resolve([])),
     fetchUsage: vi.fn(() => Promise.resolve({ kind: 'unsupported' as const })),
     beginModelPicker: vi.fn((_picked, onAdopt) => { adopt = onAdopt }),
@@ -103,6 +103,28 @@ describe('OpenCodeGoPluginCard', () => {
     expect(screen.getByRole('meter', { name: en.usageWeekly }).getAttribute('aria-valuenow')).toBe('82')
   })
 
+  it('headlines monthly remaining when every window is present', async () => {
+    const fetchUsage = vi.fn(() => Promise.resolve({
+      kind: 'ok' as const,
+      usage: {
+        fetchedAt: '2026-08-16T00:00:00.000Z',
+        session: { usage: 0.04, models: [] },
+        weekly: { usage: 0.3, models: [] },
+        monthly: { usage: 0.01, models: [] },
+      },
+    }))
+    render(<OpenCodeGoPluginCard {...props({
+      describeCredential: vi.fn(() => Promise.resolve({ configured: true, writable: true })),
+      fetchUsage,
+    })} />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('meter', { name: en.usageMonthly }).getAttribute('aria-valuenow')).toBe('99')
+    })
+    expect(screen.queryByRole('meter', { name: en.usageSession })).toBeNull()
+    expect(screen.queryByRole('meter', { name: en.usageWeekly })).toBeNull()
+  })
+
   it('does not fetch usage until a key is stored', () => {
     const fetchUsage = vi.fn()
     render(<OpenCodeGoPluginCard {...props({ fetchUsage })} />)
@@ -144,7 +166,7 @@ describe('OpenCodeGoPluginCard', () => {
   })
 
   it('stores an API key and adopts native model capabilities from discovery', async () => {
-    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView) => Promise.resolve({ settings: next, revision: 2 }))
+    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView, sourceRevision: number) => Promise.resolve({ settings: next, revision: sourceRevision + 1 }))
     const storeApiKey = vi.fn(() => Promise.resolve())
     const discoverModels = vi.fn(() => Promise.resolve([
       {
@@ -186,6 +208,7 @@ describe('OpenCodeGoPluginCard', () => {
           thinking: false,
         }],
       }),
+      1,
       'opencode-go-secret',
     )
   })
@@ -206,7 +229,7 @@ describe('OpenCodeGoPluginCard', () => {
       { id: 'keep', name: 'Keep discovered', contextWindow: 8192 },
       { id: 'new', name: 'New', contextWindow: 16384 },
     ]))
-    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView) => ({ settings: next, revision: 2 }))
+    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView, sourceRevision: number) => ({ settings: next, revision: sourceRevision + 1 }))
     render(<OpenCodeGoPluginCard {...props({
       useOpenCodeGoSettings: selector => selector(currentSnapshot),
       beginModelPicker,
@@ -231,7 +254,7 @@ describe('OpenCodeGoPluginCard', () => {
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
       models: [{ id: 'new', name: 'New', contextWindow: 16384 }],
-    }), undefined)
+    }), 1, undefined)
   })
   it('treats a base-URL-only user layer as an inherited model catalog', () => {
     const current = snapshot({ user: { baseURL: 'https://example.test/api' } })
@@ -244,9 +267,9 @@ describe('OpenCodeGoPluginCard', () => {
 
   it('reloads the accepted model catalog after the card remounts', async () => {
     let durable = structuredClone(settings)
-    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView) => {
+    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView, sourceRevision: number) => {
       durable = structuredClone(next)
-      return { settings: structuredClone(durable), revision: 2 }
+      return { settings: structuredClone(durable), revision: sourceRevision + 1 }
     })
     const first = render(<OpenCodeGoPluginCard {...props({
       saveConfiguration,
@@ -375,7 +398,7 @@ describe('OpenCodeGoPluginCard', () => {
     const currentModels: OpenCodeGoCatalogModelConfig[] = [{ id: 'alpha' }, { id: 'bravo' }, { id: 'charlie' }]
     const current = { ...settings, models: currentModels }
     const currentSnapshot = snapshot({ value: current, base: current, user: { models: currentModels } })
-    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView) => ({ settings: next, revision: 2 }))
+    const saveConfiguration = vi.fn(async (next: OpenCodeGoSettingsView, sourceRevision: number) => ({ settings: next, revision: sourceRevision + 1 }))
     const { container } = render(<OpenCodeGoPluginCard {...props({
       useOpenCodeGoSettings: selector => selector(currentSnapshot),
       saveConfiguration,
@@ -420,11 +443,11 @@ describe('OpenCodeGoPluginCard', () => {
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
       models: [{ id: 'bravo' }, { id: 'charlie' }, { id: 'alpha' }],
-    }), undefined)
+    }), 1, undefined)
   })
 
   it('accepts K/M context window spellings', async () => {
-    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView) => Promise.resolve({ settings: next, revision: 2 }))
+    const saveConfiguration = vi.fn((next: OpenCodeGoSettingsView, sourceRevision: number) => Promise.resolve({ settings: next, revision: sourceRevision + 1 }))
     render(<OpenCodeGoPluginCard {...props({ saveConfiguration })} />)
     fireEvent.click(screen.getByRole('button', { name: `${en.expand}: ${en.title}` }))
     fireEvent.click(screen.getByRole('button', { name: en.models }))
@@ -435,7 +458,7 @@ describe('OpenCodeGoPluginCard', () => {
     await waitFor(() => { expect(saveConfiguration).toHaveBeenCalledTimes(1) })
     expect(saveConfiguration).toHaveBeenCalledWith(expect.objectContaining({
       models: [expect.objectContaining({ id: 'omen', contextWindow: 1_000_000 })],
-    }), undefined)
+    }), 1, undefined)
   })
   it('renders the shared detail template when the settings page asks for it', () => {
     const onRefresh = vi.fn()

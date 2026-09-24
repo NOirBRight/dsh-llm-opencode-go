@@ -12,7 +12,7 @@ import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
 import { OPENCODE_GO_PROVIDER } from './client-contract.ts'
 import { openCodeGoProfileHeaders } from './session.ts'
 import type { OpenCodeGoCatalogModel, OpenCodeGoConnectionOptions } from './adapter.ts'
-import { protocolForModel } from './catalog.ts'
+import { chatBaseURLForApi, protocolForModel } from './catalog.ts'
 import { openCodeGoThinkingLevelMap, openCodeGoSupportedEfforts } from './reasoning.ts'
 import type { ModelThinkingLevel } from '@earendil-works/pi-ai'
 import type { PiAiReasoningEfforts } from '@deepseek-ai/dsh-llm-pi-ai'
@@ -110,7 +110,10 @@ export function createOpenCodeGoPiAiProfile(
   connection: OpenCodeGoConnectionOptions,
 ): ResolvedPiAiProviderProfile {
   const baseURL = connection.baseURL.replace(/\/+$/u, '')
-  const models = connection.models.map(model => toPiAiModel(model, connection, baseURL))
+  const models = connection.models.map(model => {
+    const api = model.api ?? protocolForModel(model.id)
+    return toPiAiModel(model, connection, chatBaseURLForApi(baseURL, api))
+  })
   const configuredMaxTokens = new Map<string, number>()
   if (connection.maxTokens !== undefined) {
     for (const model of connection.models) configuredMaxTokens.set(model.id, connection.maxTokens)

@@ -71,6 +71,8 @@ export function knownModel(id: string): OpenCodeGoKnownModel | undefined {
 /**
  * Infer the wire protocol from official docs, then prefix families for live-only ids.
  * Official mapping: grok/gpt/muse → Responses; MiniMax/Qwen → Messages; everything else → Completions.
+ *
+ * @see https://opencode.ai/docs/zh-cn/go/ API 端点 table
  */
 export function protocolForModel(id: string): OpenCodeGoApi {
   const known = BY_ID.get(id)
@@ -79,6 +81,24 @@ export function protocolForModel(id: string): OpenCodeGoApi {
   if (key.startsWith('grok-') || key.startsWith('gpt-') || key.startsWith('muse-')) return 'openai-responses'
   if (key.startsWith('minimax-') || key.startsWith('qwen')) return 'anthropic-messages'
   return 'openai-completions'
+}
+
+/**
+ * Chat origin for one protocol. Completions and Responses use the configured
+ * OpenAI-compatible origin (`https://opencode.ai/zen/go/v1`). Messages use the
+ * Anthropic SDK origin: that same URL without one trailing `/v1`, because the
+ * SDK posts `{base}/v1/messages` and the official table lists
+ * `https://opencode.ai/zen/go/v1/messages`.
+ *
+ * @param baseURL Settings origin, usually ending in `/zen/go/v1`.
+ * @param api Wire protocol for the selected model.
+ * @returns Origin passed to pi-ai as `model.baseUrl`.
+ * @see https://opencode.ai/docs/zh-cn/go/
+ */
+export function chatBaseURLForApi(baseURL: string, api: OpenCodeGoApi): string {
+  const base = baseURL.replace(/\/+$/u, '')
+  if (api !== 'anthropic-messages') return base
+  return base.endsWith('/v1') ? base.slice(0, -'/v1'.length) : base
 }
 
 /** Family used only by the picker overlay. */

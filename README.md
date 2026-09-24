@@ -8,12 +8,11 @@ The package root exposes the Cordis plugin contract and OpenCodeGoAdapter. The s
 
 ## Compatibility
 
-Verified runtimes are DeepSeek Harness `0.1.5-rc.1` (current) and historically `0.1.2-alpha.4` / `0.1.2-rc.1` on Cordis `4.0.2`; this record is evidence, not an allowlist.
+This source targets official DSH `0.1.7-alpha.2`: DSH package peers are pinned to that release, with Cordis `~4.0.4` and Schemastery `~3.18.4`.
 
-Unknown newer runtimes are attempted on a best-effort basis after one warning, and the plugin keeps its normal mount path.
+The compatibility metadata identifies the exact alpha2 target; unknown Hosts still warn once and use the normal best-effort mount path. Only a reproduced failure is blocklisted.
 
-A reproduced failure is blocklisted only afterward; see the [compatibility records](package.json) for the affected version, reason, and evidence.
-
+`catalogId` and the unresolved `unknown` account state are attached at runtime. Published `dsh-llm-providers-ui` 0.2.8 omits those fields and treats `unknown` as unconnected; they only take effect on a newer Owner.
 
 ## LLM Providers UI ownership
 
@@ -31,23 +30,23 @@ Install the published package through the profile manager:
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.12-015rc1e/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24-015rc1d/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
 dsh web
 ~~~
 
 The package contains release-ready `lib` artifacts. Install `dsh-llm-providers-ui` alongside this plugin to provide the shared LLM Providers page.
 
-The Host Connection RPC authenticates browser requests through the Web trust fence. Durable settings remain enabled only for loopback pages; non-loopback pages keep their settings process-local even when their authority is trusted. Use SSH forwarding when remote editing is needed.
+The client RPC uses the authenticated `/api/plugin-rpc/opencode-go` Fetch route. The physical `/api` carrier checks Host/Origin and cookie authentication and enforces its body cap before dispatching to the plugin route.
 
 Put this plugin in the profile bundle with `dsh-llm-providers-ui`; the owner enumerates every installed provider card.
 
 ## Web configuration
 
-Open Settings → LLM Providers → OpenCode Go. The provider-management RPC returns only decoded settings, revision, and value-free credential status; API keys are write-only and never echoed or logged. The Connection RPC authenticates through the Web trust fence, while durable settings writes require a loopback settings scope; use SSH forwarding when the browser is remote.
+Open Settings → LLM Providers → OpenCode Go. Configuration is read through the alpha2 `ConfigForm` for Loader entry `llm-opencode-go`; before a revision-fenced mutation of the volatile `baseURL` and `models` fields, the authenticated Host route validates the URL and model catalog. Credential status and writes use the same authenticated plugin RPC; API keys are write-only and never echoed or logged.
 
-The card saves the public base URL and model catalog together as one revision-fenced `llm-opencode-go` settings mutation. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` (OpenAI-shaped ids only) and fills name, context, vision, thinking, and protocol from a local snapshot, then from a live [models.dev](https://models.dev) `opencode-go` overlay so newly published ids such as `omen-alpha` are not blank after Fetch.
+The card saves the public base URL and model catalog together with one revision-fenced `ConfigForm.mutate`. Fetch available models opens the picker immediately. The Host reads `GET /zen/go/v1/models` (OpenAI-shaped ids only) and fills name, context, vision, thinking, and protocol from a local snapshot, then from a live [models.dev](https://models.dev) `opencode-go` overlay so newly published ids such as `omen-alpha` are not blank after Fetch.
 
 When a key is stored, the card loads account quota while collapsed (and again on Fetch/Refresh). The Host reads `GET &lt;baseURL&gt;/usage`; remaining 5-hour, weekly, and monthly windows paint from a local cache on first open, then refresh in the background. The credential never crosses to the browser.
 
@@ -63,9 +62,9 @@ The Models page lists saved `opencode-go` models and can select them. Current Ha
 
 Chat uses one `opencode-go` route. The adapter does **not** re-register that route as a configurable provider (the pi-ai catalog already owns the directory entry). Per-model `api` selects:
 
-    openai-completions   POST /zen/go/v1/chat/completions
-    openai-responses     POST /zen/go/v1/responses
-    anthropic-messages   POST /zen/go/v1/messages
+    openai-completions   POST {baseURL}/chat/completions
+    openai-responses     POST {baseURL}/responses
+    anthropic-messages   POST {baseURL minus trailing /v1}/v1/messages
 
 Native independent capabilities remain Host-only:
 
@@ -101,7 +100,7 @@ Official provider documentation: https://opencode.ai/docs/zh-cn/go/
         api: openai-completions
 ~~~
 
-The provider route remains `opencode-go` and the settings namespace remains `llm-opencode-go`. Only configured catalog models are accepted for chat. Per-row `contextWindow` is the DSH compaction budget. The fallback context window is 262,144 tokens.
+The provider route remains `opencode-go`; the Loader entry id is `llm-opencode-go`. Only configured catalog models are accepted for chat. Per-row `contextWindow` is the DSH compaction budget. The fallback context window is 262,144 tokens.
 
 ### Model capabilities
 
@@ -123,7 +122,7 @@ Usage maps to Harness input/output counts. maxTokens is clamped against the conf
 
 ## Release installation (Latest)
 
-OpenCode Go models with per-model protocol routing, discovery, and usage. The release artifact targets DeepSeek Harness 0.1.5-rc.1 and contains built Host/Client files only; it has no sibling-repository source, workstation path, link:, or workspace: dependency.
+This release targets official DeepSeek Harness `0.1.7-alpha.2`; use the matching published Provider UI `0.2.12` release on Web.
 
 The dsh-llm-providers-ui package owns the LLM Providers page, navigation, and shared order store. This package owns only its provider card, models, credentials, and Host route. Install the Owner first for Web; headless Host routing works without the Owner.
 
@@ -131,18 +130,18 @@ Latest (Owner + this plugin; required together on Web):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
 ~~~
 
 Fixed versions (reproducible):
 
 ~~~sh
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.1.12-015rc1e/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/download/v0.2.12/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24-015rc1d/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz
 ~~~
 
 Update, uninstall, and verify:
@@ -150,9 +149,9 @@ Update, uninstall, and verify:
 ~~~sh
 # Update Owner + this plugin to Latest
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.1.12.tgz
+  https://github.com/NOirBRight/dsh-llm-providers-ui/releases/latest/download/dsh-llm-providers-ui-0.2.12.tgz
 dsh plugin --profile web add --force \
-  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.24.tgz
+  https://github.com/NOirBRight/dsh-llm-opencode-go/releases/latest/download/dsh-llm-opencode-go-0.1.32.tgz
 # Verify the loaded version
 dsh plugin --profile web list
 dsh plugin --profile web doctor
@@ -162,6 +161,6 @@ dsh plugin --profile web remove dsh-llm-opencode-go
 
 Configuration: use the plugin section in Settings for Web UI plugins, or the profile dsh.profile.bundles entry for Host-only plugins. Start with this README's minimal YAML/JSON example and provide credentials/backend addresses explicitly.
 
-Rollback: rerun the fixed v0.1.17 command, verify the profile list, then restart the Web service once. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
+Rollback: restore the previous Host release and matching profile together; older OpenCode Go releases are not compatible with this Alpha.2 Host. Inspect journalctl --user -u dsh-web.service and dsh plugin --profile web doctor; never put a source checkout in the production profile.
 
-Release and integrity: [v0.1.24](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.24) · [SHA256SUMS](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.24/SHA256SUMS).
+Release and integrity: [v0.1.32](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/tag/v0.1.32) · [SHA256](https://github.com/NOirBRight/dsh-llm-opencode-go/releases/download/v0.1.32/dsh-llm-opencode-go-0.1.32.tgz.sha256).

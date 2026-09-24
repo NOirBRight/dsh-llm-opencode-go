@@ -1,6 +1,6 @@
 /** OpenCode Go connection and model-catalog card for Plugin configuration. */
 import type { ReactNode } from 'react';
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client';
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { OpenCodeGoCatalogModelConfig, OpenCodeGoDiscoveryRequest, OpenCodeGoSaveResult, OpenCodeGoSettingsView, OpenCodeGoUsageView } from '../client-contract.ts';
 import type { OpenCodeGoSettingsKey } from './locales.ts';
@@ -30,15 +30,15 @@ export interface OpenCodeGoPluginCardFace {
     /** Localized card copy. */
     t: (key: OpenCodeGoSettingsKey) => string;
     hooks: {
-        /** Reactive Host-owned settings section. */
-        openCodeGoSettings: SettingsScope<OpenCodeGoSettingsView>;
+        /** Reactive Loader configuration form. */
+        openCodeGoSettings: ConfigForm<OpenCodeGoSettingsView>;
     };
     /** Read value-free credential status for the section's reference. */
     describeCredential: () => Promise<OpenCodeGoCredentialState>;
     /** Persist a typed key through the credentials API before Host reads. */
     storeApiKey: (apiKey: string) => Promise<void>;
-    /** Atomically store changed settings and return the accepted Host snapshot. */
-    saveConfiguration: (settings: OpenCodeGoSettingsView, apiKey?: string) => Promise<OpenCodeGoSaveResult>;
+    /** Atomically save against the draft's original form revision; apiKey is optional. */
+    saveConfiguration: (settings: OpenCodeGoSettingsView, sourceRevision: number, apiKey?: string) => Promise<OpenCodeGoSaveResult>;
     /** Ask Host to list models using the stored credential. */
     discoverModels: (request: OpenCodeGoDiscoveryRequest) => Promise<readonly OpenCodeGoCatalogModelConfig[]>;
     /** Ask Host to read usage using the stored credential. */

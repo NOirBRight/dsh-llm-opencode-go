@@ -2,11 +2,14 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { OpenCodeGoSettingsView } from '../src/client-contract.ts'
 import {
-  OPENCODE_GO_SAVE_ENDPOINT,
-  OPENCODE_GO_SETTINGS_READ_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_SET_ENDPOINT,
+  OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
+  OPENCODE_GO_ENTRY_ID,
+  OPENCODE_GO_VALIDATE_ENDPOINT,
+  OPENCODE_GO_RPC_ENDPOINT,
 } from '../src/client-contract.ts'
 import { apply, inject } from '../src/client/index.ts'
 
@@ -24,8 +27,8 @@ const value: OpenCodeGoSettingsView = {
   streamIdleTimeoutMs: 300_000,
 }
 
-function scope(): SettingsScope<OpenCodeGoSettingsView> {
-  const snapshot: SettingsScopeSnapshot<OpenCodeGoSettingsView> = {
+function configForm() {
+  let snapshot: ConfigFormSnapshot<OpenCodeGoSettingsView> = {
     status: 'ready',
     value,
     base: value,
@@ -34,12 +37,28 @@ function scope(): SettingsScope<OpenCodeGoSettingsView> {
     writable: true,
     mode: 'host',
   }
+  const listeners = new Set<() => void>()
+  const mutate = vi.fn(async (ops: Parameters<ConfigForm<OpenCodeGoSettingsView>['mutate']>[0], expectedRevision?: number) => {
+    if (snapshot.value === undefined || snapshot.revision === undefined || expectedRevision !== snapshot.revision || !snapshot.writable) {
+      return false
+    }
+    const next = { ...snapshot.value }
+    for (const op of ops) {
+      if (op.op !== 'set' || op.path.length !== 1) continue
+      const field = op.path[0]
+      if (field === 'baseURL') next.baseURL = op.value as string
+      if (field === 'models') next.models = op.value as OpenCodeGoSettingsView['models']
+    }
+    snapshot = { ...snapshot, value: next, revision: snapshot.revision + 1 }
+    listeners.forEach(listener => { listener() })
+    return true
+  })
   return {
     getSnapshot: () => snapshot,
-    subscribe: () => () => undefined,
-    mutate: vi.fn(() => Promise.resolve()),
-    set: vi.fn(() => Promise.resolve()),
-    unset: vi.fn(() => Promise.resolve()),
+    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+    mutate,
+    set: vi.fn((field: string, next: unknown) => mutate([{ op: 'set', path: [field], value: next }], snapshot.revision)),
+    unset: vi.fn((field: string) => mutate([{ op: 'unset', path: [field] }], snapshot.revision)),
   }
 }
 
@@ -78,7 +97,10 @@ class FakeSlots extends Service {
   }
 }
 
-async function bench() {
+async function bench(
+  call = vi.fn(() => Promise.resolve({ ok: true, value: { models: [] } })),
+  openCodeGoSettings = configForm(),
+) {
   const ctx = new Context()
   await ctx.plugin(FakeSlots).await()
   const slots = ctx.get('slots') as FakeSlots
@@ -86,28 +108,14 @@ async function bench() {
     register: () => () => undefined,
     bind: () => (key: string) => key,
   } as never)
-  ctx.provide('settingsScope', { bind: () => scope() } as never)
-  ctx.provide('remote', { $on: () => () => undefined } as never)
-  ctx.provide('connection', {
-    api: {
-      credentials: {
-        describe: vi.fn(() => Promise.resolve({
-          rpcId: 'credential',
-          result: { ok: true, value: { credentials: {} } },
-        })),
-        set: vi.fn(() => Promise.resolve({ rpcId: 'credential', result: { ok: true, value: {} } })),
-      },
-    },
-    rpc: {
-      call: vi.fn(() => Promise.resolve({ ok: true, value: { models: [] } })),
-    },
-  } as never)
-  return { ctx, slots }
+  ctx.provide('configForms', { get: () => openCodeGoSettings } as never)
+  ctx.provide('connection', { rpc: { call } } as never)
+  return { ctx, slots, openCodeGoSettings }
 }
 
 describe('OpenCode Go client plugin registration', () => {
   it('declares only the client services it consumes', () => {
-    expect(inject).toEqual(['slots', 'locale', 'connection'])
+    expect(inject).toEqual(['slots', 'locale', 'connection', 'configForms'])
   })
 
   it('registers the card and frame picker, then removes both with the plugin fiber', async () => {
@@ -184,41 +192,123 @@ describe('OpenCode Go client plugin registration', () => {
     await ctx.fiber.dispose()
   })
 
-  it('reuses the accepted revision on the next save', async () => {
-    let revision = 1
-    const call = vi.fn(async (_channel: string, endpoint: string, payload: unknown) => {
-      if (endpoint === OPENCODE_GO_SETTINGS_READ_ENDPOINT) {
-        return {
-          ok: true,
-          value: { settings: value, revision, credential: { configured: false, writable: true } },
-        }
-      }
-      if (endpoint === OPENCODE_GO_SAVE_ENDPOINT) {
-        const body = payload as { baseURL: string, models: OpenCodeGoSettingsView['models'], expectedRevision: number }
-        const next = { ...value, baseURL: body.baseURL, models: body.models }
-        revision += 1
-        return { ok: true, value: { settings: next, revision } }
-      }
-      return { ok: true, value: {} }
-    })
-    const ctx = new Context()
-    await ctx.plugin(FakeSlots).await()
-    const slots = ctx.get('slots') as FakeSlots
-    ctx.provide('locale', {
-      register: () => () => undefined,
-      bind: () => (key: string) => key,
-    } as never)
-    ctx.provide('connection', { rpc: { call } } as never)
+  it('reuses the accepted ConfigForm revision on the next save', async () => {
+    const openCodeGoSettings = configForm()
+    const { ctx, slots } = await bench(undefined, openCodeGoSettings)
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
-    await vi.waitFor(() => {
-      expect(face.hooks.openCodeGoSettings.getSnapshot().status).toBe('ready')
+
+    await face.saveConfiguration({ ...value, models: [{ id: 'first' }] }, 1)
+    await face.saveConfiguration({ ...value, models: [{ id: 'first' }, { id: 'second' }] }, 2)
+    expect(openCodeGoSettings.mutate.mock.calls.map(([, expectedRevision]) => expectedRevision)).toEqual([1, 2])
+    expect(openCodeGoSettings.mutate.mock.calls.map(([ops]) => ops.map(op => op.path))).toEqual([[['models']], [['models']]])
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('rejects a stale card snapshot before it can overwrite settings or save its credential', async () => {
+    const call = vi.fn(() => Promise.resolve({ ok: true, value: {} }))
+    const openCodeGoSettings = configForm()
+    const { ctx, slots } = await bench(call, openCodeGoSettings)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
+
+    await face.saveConfiguration({ ...value, baseURL: 'https://saved-in-tab.test/v1' }, 1)
+    await expect(face.saveConfiguration({ ...value, baseURL: 'https://saved-in-tab.test/v1' }, 1)).rejects.toThrow()
+    await expect(face.saveConfiguration({
+      ...value,
+      models: [{ id: 'stale-model' }],
+    }, 1, 'stale-key')).rejects.toThrow()
+
+    expect(openCodeGoSettings.getSnapshot().value).toMatchObject({
+      baseURL: 'https://saved-in-tab.test/v1',
+      models: [],
     })
-    await face.saveConfiguration({ ...value, models: [{ id: 'first' }] })
-    await face.saveConfiguration({ ...value, models: [{ id: 'first' }, { id: 'second' }] })
-    const saves = call.mock.calls.filter(entry => entry[1] === OPENCODE_GO_SAVE_ENDPOINT)
-    expect(saves.map(entry => (entry[2] as { expectedRevision: number }).expectedRevision)).toEqual([1, 2])
+    expect(openCodeGoSettings.getSnapshot().revision).toBe(2)
+    expect(call).not.toHaveBeenCalledWith(
+      '/api',
+      OPENCODE_GO_RPC_ENDPOINT,
+      expect.objectContaining({ endpoint: OPENCODE_GO_CREDENTIAL_SET_ENDPOINT }),
+      expect.any(AbortSignal),
+    )
+
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('does not store a key when another tab saves during asynchronous settings validation', async () => {
+    let completeValidation!: () => void
+    const validation = new Promise<void>(resolve => { completeValidation = resolve })
+    const call = vi.fn((_carrier: string, _method: string, wrapped: unknown) => {
+      const endpoint = typeof wrapped === 'object' && wrapped !== null && 'endpoint' in wrapped
+        ? wrapped.endpoint
+        : undefined
+      if (endpoint === OPENCODE_GO_VALIDATE_ENDPOINT) {
+        return validation.then(() => ({ ok: true, value: {} }))
+      }
+      return Promise.resolve({ ok: true, value: {} })
+    })
+    const openCodeGoSettings = configForm()
+    const { ctx, slots } = await bench(call, openCodeGoSettings)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as OpenCodeGoPluginCardFace
+    const staleSave = face.saveConfiguration({ ...value, models: [{ id: 'stale-model' }] }, 1, 'stale-key')
+    await vi.waitFor(() => expect(call).toHaveBeenCalledWith(
+      '/api', OPENCODE_GO_RPC_ENDPOINT,
+      expect.objectContaining({ endpoint: OPENCODE_GO_VALIDATE_ENDPOINT }),
+      expect.any(AbortSignal),
+    ))
+    await openCodeGoSettings.mutate([{ op: 'set', path: ['models'], value: [{ id: 'other-tab-model' }] }], 1)
+    completeValidation()
+    await expect(staleSave).rejects.toThrow()
+    expect(openCodeGoSettings.getSnapshot().value?.models).toEqual([{ id: 'other-tab-model' }])
+    expect(call).not.toHaveBeenCalledWith(
+      '/api', OPENCODE_GO_RPC_ENDPOINT,
+      expect.objectContaining({ endpoint: OPENCODE_GO_CREDENTIAL_SET_ENDPOINT }),
+      expect.any(AbortSignal),
+    )
+    await fiber.dispose()
+    await ctx.fiber.dispose()
+  })
+
+  it('keeps a saved account when an older credential-status read finishes later', async () => {
+    let resolveRead: (value: unknown) => void
+    const olderRead = new Promise<unknown>(resolve => { resolveRead = resolve })
+    const call = vi.fn((_carrier: string, _method: string, wrapped: unknown) => {
+      const endpoint = typeof wrapped === 'object' && wrapped !== null && 'endpoint' in wrapped
+        ? wrapped.endpoint
+        : undefined
+      if (endpoint === OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT) return olderRead
+      if (endpoint === OPENCODE_GO_CREDENTIAL_SET_ENDPOINT) {
+        return Promise.resolve({ ok: true, value: { configured: true } })
+      }
+      return Promise.resolve({ ok: true, value: {} })
+    })
+    const { ctx, slots } = await bench(call)
+    let entry: { account(): { state: string } } | undefined
+    ctx.provide('providerDirectory', {
+      register: (next: typeof entry) => { entry = next; return () => undefined },
+      update: vi.fn(),
+      invalidateUsage: vi.fn(),
+    } as never)
+    const fiber = ctx.plugin({ inject: [...inject], apply })
+    await fiber.await()
+    await vi.waitFor(() => {
+      expect(call).toHaveBeenCalledWith('/api', OPENCODE_GO_RPC_ENDPOINT, {
+        endpoint: OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT,
+        payload: {},
+      }, expect.any(AbortSignal))
+    })
+    const face = slots.entries('settings.provider.item')[0]?.inject?.() as {
+      storeApiKey(value: string): Promise<void>
+    }
+    await face.storeApiKey('new-key')
+    expect(entry?.account().state).toBe('configured')
+    resolveRead({ ok: true, value: { configured: false, writable: true } })
+    await vi.waitFor(() => { expect(entry?.account().state).toBe('configured') })
     await fiber.dispose()
     await ctx.fiber.dispose()
   })

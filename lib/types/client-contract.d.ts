@@ -1,9 +1,9 @@
 /** Browser-safe constants and JSON decoders shared by the Host and client plugin faces. */
-/** Settings namespace owned by the OpenCode Go plugin. */
-export declare const OPENCODE_GO_SETTINGS_NAMESPACE = "llm-opencode-go";
+/** Loader entry id from cordis.patch.yml and key used by the provider directory. */
+export declare const OPENCODE_GO_ENTRY_ID = "llm-opencode-go";
 /** Provider route owned by the OpenCode Go plugin. */
 export declare const OPENCODE_GO_PROVIDER = "opencode-go";
-/** Credential reference used when the settings section names none. */
+/** Credential reference used when the plugin config omits it. */
 export declare const DEFAULT_API_KEY_ENV = "OPENCODE_API_KEY";
 /** Public OpenCode Go API base URL. */
 export declare const OPENCODE_GO_PUBLIC_BASE_URL = "https://opencode.ai/zen/go/v1";
@@ -11,20 +11,18 @@ export declare const OPENCODE_GO_PUBLIC_BASE_URL = "https://opencode.ai/zen/go/v
 export declare const OPENCODE_GO_DEFAULT_CONTEXT_WINDOW = 262144;
 /** Default maximum idle interval while a stream read is outstanding. */
 export declare const OPENCODE_GO_DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300000;
-/** Private Connection RPC channel used by this package's two runtime faces. */
-export declare const OPENCODE_GO_RPC_CHANNEL = "/opencode-go";
-/** Provider-management settings snapshot endpoint. */
-export declare const OPENCODE_GO_SETTINGS_READ_ENDPOINT = "settings/read";
-/** Rich model-discovery endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
+/** Exact Fetch route method shared by this Host and client plugin. */
+export declare const OPENCODE_GO_RPC_ENDPOINT = "plugin-rpc/opencode-go";
+/** Rich model-discovery endpoint inside the authenticated plugin Fetch route. */
 export declare const OPENCODE_GO_DISCOVER_ENDPOINT = "models/discover";
-/** Revision-fenced settings-save endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
-export declare const OPENCODE_GO_SAVE_ENDPOINT = "settings/save";
 /** Value-free credential status endpoint. */
 export declare const OPENCODE_GO_CREDENTIAL_STATUS_ENDPOINT = "credentials/status";
 /** One-way credential write endpoint. */
 export declare const OPENCODE_GO_CREDENTIAL_SET_ENDPOINT = "credentials/set";
-/** Subscription usage-snapshot endpoint inside {@link OPENCODE_GO_RPC_CHANNEL}. */
+/** Subscription usage-snapshot endpoint inside the authenticated plugin Fetch route. */
 export declare const OPENCODE_GO_USAGE_ENDPOINT = "usage/read";
+/** Validate edited settings on the Host before committing Loader ConfigForm changes. */
+export declare const OPENCODE_GO_VALIDATE_ENDPOINT = "settings/validate";
 /** Wire protocol selected for one OpenCode Go model. */
 export type OpenCodeGoApi = 'openai-completions' | 'openai-responses' | 'anthropic-messages';
 /** One model stored in the plugin's advisory catalog. */
@@ -56,7 +54,11 @@ export interface OpenCodeGoCatalogModelConfig {
 export interface OpenCodeGoSettingsView {
     /** Credential reference resolved by the Host. */
     apiKeyEnv: string;
-    /** Go API base URL ending in /zen/go/v1. */
+    /**
+     * OpenAI-compatible Go origin, usually `https://opencode.ai/zen/go/v1`.
+     * Completions, Responses, listing, and usage use this value. Messages chat
+     * strips one trailing `/v1` before the Anthropic SDK appends `/v1/messages`.
+     */
     baseURL: string;
     /** Advisory model catalog. */
     models: OpenCodeGoCatalogModelConfig[];
@@ -77,28 +79,12 @@ export interface OpenCodeGoDiscoveryResult {
     /** Models in provider order, including documented protocol and capability flags. */
     models: OpenCodeGoCatalogModelConfig[];
 }
-/** Atomic editable-settings payload sent by the package's browser face. */
-export interface OpenCodeGoSaveRequest {
-    /** API URL currently shown by the editor. */
-    baseURL: string;
-    /** Complete advisory catalog currently shown by the editor. */
-    models: OpenCodeGoCatalogModelConfig[];
-    /** Settings descriptor revision from which the editor began. */
-    expectedRevision: number;
-}
 /** Accepted settings snapshot returned after one atomic Host mutation. */
 export interface OpenCodeGoSaveResult {
     /** Resolved settings after the mutation commits. */
     settings: OpenCodeGoSettingsView;
     /** New descriptor revision accepted by the Host. */
     revision: number;
-}
-/** Secret-free provider settings and credential snapshot. */
-export interface OpenCodeGoSettingsReadResult extends OpenCodeGoSaveResult {
-    credential: {
-        configured: boolean;
-        writable: boolean;
-    };
 }
 export interface OpenCodeGoCredentialSetRequest {
     apiKey: string;
@@ -139,19 +125,13 @@ export type OpenCodeGoUsageReply = {
 };
 /** Narrow one model crossing the settings or plugin-RPC JSON boundary. */
 export declare function decodeOpenCodeGoCatalogModel(value: unknown): OpenCodeGoCatalogModelConfig | undefined;
-/** Narrow the redacted, schema-resolved settings section before it enters React state. */
-export declare function decodeOpenCodeGoSettings(value: unknown): OpenCodeGoSettingsView | undefined;
+/** Only public settings reach the Host validator; credentials use their own write route. */
+export declare function decodeOpenCodeGoValidationRequest(value: unknown): Pick<OpenCodeGoSettingsView, 'baseURL' | 'models'> | undefined;
 /** Narrow the rich discovery request received by the Host plugin. */
 export declare function decodeOpenCodeGoDiscoveryRequest(value: unknown): OpenCodeGoDiscoveryRequest | undefined;
 /** Narrow the Host discovery reply before the picker renders it. */
 export declare function decodeOpenCodeGoDiscoveryResult(value: unknown): OpenCodeGoDiscoveryResult | undefined;
-/** Narrow the atomic save request. */
-export declare function decodeOpenCodeGoSaveRequest(value: unknown): OpenCodeGoSaveRequest | undefined;
-/** Decode provider settings/credential management snapshot. */
-export declare function decodeOpenCodeGoSettingsReadResult(value: unknown): OpenCodeGoSettingsReadResult | undefined;
 export declare function decodeOpenCodeGoCredentialSetRequest(value: unknown): OpenCodeGoCredentialSetRequest | undefined;
-/** Narrow the Host save reply. */
-export declare function decodeOpenCodeGoSaveResult(value: unknown): OpenCodeGoSaveResult | undefined;
 /** Decode the secret-free usage snapshot returned by the Host. */
 export declare function decodeOpenCodeGoUsageView(value: unknown): OpenCodeGoUsageView | undefined;
 /** Decode the usage RPC success payload. */

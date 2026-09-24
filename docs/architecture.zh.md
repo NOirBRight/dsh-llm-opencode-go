@@ -6,4 +6,6 @@
 
 插件只暴露一个 `opencode-go` provider。聊天走共享 PiAiAdapter；每个模型用 `api` 字段选择 Completions、Responses 或 Messages。发现和额度仍是独立的 Host 原生调用。
 
+设置里保存 OpenAI 兼容源 `https://opencode.ai/zen/go/v1`。`GET /models` 和 `GET /usage` 始终打这个源。聊天按官方端点表（https://opencode.ai/docs/zh-cn/go/）：Completions / Responses 用该源；Messages（MiniMax、Qwen）把末尾一个 `/v1` 去掉再交给 Anthropic SDK，SDK 再拼 `/v1/messages`，落到 `https://opencode.ai/zen/go/v1/messages`。每个请求带 `x-opencode-session`（聊天用 DSH session id；listing 和 usage 用稳定 id）。
+
 `GET /models` 目前只有 OpenAI 形 id。先抄 listing 字段，再用本地快照，然后叠 [models.dev](https://models.dev) 的 `opencode-go.models`。listing、overlay、快照都没有 context 时不编造。

@@ -3,6 +3,9 @@
     "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@deepseek-ai/cordis": ["./node_modules/@deepseek-ai/cordis/lib/types/index.d.ts"]
+    },
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "jsx": "react-jsx",

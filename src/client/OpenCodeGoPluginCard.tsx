@@ -1,8 +1,8 @@
 /** OpenCode Go connection and model-catalog card for Plugin configuration. */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { ConfigForm } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type {
@@ -19,9 +19,11 @@ import { BrandMark } from './BrandMark.tsx'
 import { inputStyle, modelContentStyle, rowInputStyle } from './model-catalog-ui.tsx'
 import { formatEffortName, isValidEffortForModel, openCodeGoSupportedEfforts, resolveEffectiveDefaultEffort } from '../reasoning.ts'
 import { ProviderCardHeader, ProviderQuotaMeter, UsageHeader, UsageSkeleton, UsageUpdatedAt, formatUsageClock, providerHeaderStyle, resetLabelOf } from './provider-chrome.tsx'
+import { useProviderQuotaCache } from 'dsh-llm-providers-ui/provider-ui'
 import type { ProviderHeadlineQuota } from './provider-chrome.tsx'
 import type { ProviderItemSlotContext } from 'dsh-llm-providers-ui/provider-detail'
 import { peekOpenCodeGoUsageView, persistOpenCodeGoUsage, remainingPercent } from './usage-reader.ts'
+import { OPENCODE_GO_ENTRY_ID } from '../client-contract.ts'
 import { SortableList } from 'dsh-llm-providers-ui/sortable'
 
 /** Credential state exposed without returning the credential value. */
@@ -47,15 +49,15 @@ export interface OpenCodeGoPluginCardFace {
   /** Localized card copy. */
   t: (key: OpenCodeGoSettingsKey) => string
   hooks: {
-    /** Reactive Host-owned settings section. */
-    openCodeGoSettings: SettingsScope<OpenCodeGoSettingsView>
+    /** Reactive Loader configuration form. */
+    openCodeGoSettings: ConfigForm<OpenCodeGoSettingsView>
   }
   /** Read value-free credential status for the section's reference. */
   describeCredential: () => Promise<OpenCodeGoCredentialState>
   /** Persist a typed key through the credentials API before Host reads. */
   storeApiKey: (apiKey: string) => Promise<void>
-  /** Atomically store changed settings and return the accepted Host snapshot. */
-  saveConfiguration: (settings: OpenCodeGoSettingsView, apiKey?: string) => Promise<OpenCodeGoSaveResult>
+  /** Atomically save against the draft's original form revision; apiKey is optional. */
+  saveConfiguration: (settings: OpenCodeGoSettingsView, sourceRevision: number, apiKey?: string) => Promise<OpenCodeGoSaveResult>
   /** Ask Host to list models using the stored credential. */
   discoverModels: (request: OpenCodeGoDiscoveryRequest) => Promise<readonly OpenCodeGoCatalogModelConfig[]>
   /** Ask Host to read usage using the stored credential. */
@@ -338,19 +340,18 @@ function headlineQuota(
   t: OpenCodeGoPluginCardFace['t'],
 ): ProviderHeadlineQuota | undefined {
   const view = usage.status === 'ready' ? usage.usage : lastUsage
-  const weekly = view?.weekly
-  const monthly = view?.monthly
-  const session = view?.session
-  const window = weekly ?? monthly ?? session
-  if (window !== undefined) {
-    const label = weekly !== undefined ? t('usageWeekly') : monthly !== undefined ? t('usageMonthly') : t('usageSession')
+  const picked = (
+    view?.monthly !== undefined ? { window: view.monthly, label: t('usageMonthly') } as const
+      : view?.weekly !== undefined ? { window: view.weekly, label: t('usageWeekly') } as const
+        : view?.session !== undefined ? { window: view.session, label: t('usageSession') } as const
+          : undefined
+  )
+  if (picked !== undefined) {
+    const detail = resetDetail(picked.window.resetsAt, t)
     return {
-      label,
-      remainingPercent: remainingPercent(window.usage),
-      ...(() => {
-        const detail = resetDetail(window.resetsAt, t)
-        return detail === undefined ? {} : { detail }
-      })(),
+      label: picked.label,
+      remainingPercent: remainingPercent(picked.window.usage),
+      ...detail === undefined ? {} : { detail },
     }
   }
   if (usage.status === 'error' || usage.status === 'unsupported') return { label: t('usage') }
@@ -396,8 +397,10 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [modelSorting, setModelSorting] = useState(false)
   const [expandedModels, setExpandedModels] = useState<ReadonlySet<string>>(new Set())
+  const usageEpoch = useRef(0)
   const dirty = source !== undefined && draft !== undefined && (!sameDraft(source, draft) || apiKey.length > 0)
 
+  useEffect(() => () => { usageEpoch.current++ }, [])
   useEffect(() => {
     if (snapshot.status !== 'ready' || snapshot.value === undefined) return
     if (snapshot.revision === sourceRevision) return
@@ -526,15 +529,19 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   const loadUsage = async (): Promise<void> => {
     // The settings page owns quota in the shared detail; the card self-loads only in the legacy layout.
     if (props.mode === 'detail') return
+    const epoch = ++usageEpoch.current
     if (peekOpenCodeGoUsageView() === undefined) setUsage({ status: 'loading' })
     try {
       if (apiKey.trim().length > 0) {
         await props.storeApiKey(apiKey.trim())
+        if (epoch !== usageEpoch.current) return
         await refreshCredential()
+        if (epoch !== usageEpoch.current) return
       }
       const read = await props.fetchUsage({
         ...draft === undefined ? {} : { baseURL: draft.baseURL.trim() },
       })
+      if (epoch !== usageEpoch.current) return
       if (read.kind === 'ok') {
         setLastUsage(read.usage)
         persistOpenCodeGoUsage(read.usage)
@@ -548,6 +555,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
             : { status: 'unsupported' },
       )
     } catch (error: unknown) {
+      if (epoch !== usageEpoch.current) return
       setUsage({ status: 'error', message: usageErrorOf(error, t) })
     }
   }
@@ -616,13 +624,13 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
   }
 
   const save = async (): Promise<void> => {
-    if (draft === undefined || snapshot.value === undefined || invalid) return
+    if (draft === undefined || snapshot.value === undefined || sourceRevision === undefined || invalid) return
     setBusy(true)
     setFailure(undefined)
     setNotice(undefined)
     try {
       const settings = settingsOf(draft, snapshot.value)
-      const accepted = await props.saveConfiguration(settings, apiKey.trim().length === 0 ? undefined : apiKey.trim())
+      const accepted = await props.saveConfiguration(settings, sourceRevision, apiKey.trim().length === 0 ? undefined : apiKey.trim())
       const next = draftOf(accepted.settings)
       setSource(next)
       setDraft(next)
@@ -645,7 +653,14 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
 
   const headerCount = t('summaryModels').replace('{count}', String(draft?.models.length ?? 0))
   const headerStatus = credential?.configured === true ? t('summaryOn') : t('summaryOff')
-  const headerQuota = headlineQuota(usage, lastUsage, t)
+  const liveQuota = headlineQuota(usage.status === 'ready' ? usage : { status: 'idle' }, undefined, t) ?? null
+  const withheld = credential?.configured === false
+    || usage.status === 'error' || usage.status === 'unsupported' || usage.status === 'needs-restart'
+  const headerQuota = useProviderQuotaCache(OPENCODE_GO_ENTRY_ID, 'OpenCode Go', liveQuota, {
+    answered: credential !== undefined,
+    signedOut: credential?.configured === false,
+    withheld,
+  })
 
   // Prototype C pieces, shared by the legacy card and the migrated detail.
   const modelsList = (
@@ -905,7 +920,7 @@ export function OpenCodeGoPluginCard(props: OpenCodeGoPluginCardProps): ReactNod
           summary={headerCount}
           status={headerStatus}
           role="llm"
-          {...headerQuota === undefined ? {} : { quota: headerQuota }}
+          {...headerQuota === null ? {} : { quota: headerQuota }}
           open={open}
           unsaved={dirty}
           unsavedLabel={t('unsaved')}

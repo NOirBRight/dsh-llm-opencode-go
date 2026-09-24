@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { discoverModels, parseOpenCodeGoModels } from '../src/discovery.ts'
-import { protocolForModel } from '../src/catalog.ts'
+import { chatBaseURLForApi, protocolForModel } from '../src/catalog.ts'
 import {
   clearOpenCodeGoModelsDevCache,
   loadOpenCodeGoModelsDev,
@@ -38,6 +38,15 @@ describe('OpenCode Go model discovery', () => {
       ['unknown-model', 'openai-completions', undefined],
     ])
     expect(protocolForModel('gpt-5.6-luna')).toBe('openai-responses')
+  })
+
+  it('derives Anthropic Messages origin by stripping one trailing /v1', () => {
+    const origin = 'https://opencode.ai/zen/go/v1'
+    expect(chatBaseURLForApi(origin, 'openai-completions')).toBe(origin)
+    expect(chatBaseURLForApi(origin + '/', 'openai-responses')).toBe(origin)
+    expect(chatBaseURLForApi(origin, 'anthropic-messages')).toBe('https://opencode.ai/zen/go')
+    expect(chatBaseURLForApi('https://gateway.example/openai/v1', 'anthropic-messages')).toBe('https://gateway.example/openai')
+    expect(chatBaseURLForApi('https://gateway.example/go', 'anthropic-messages')).toBe('https://gateway.example/go')
   })
 
   it('prefers live context_length when the listing supplies one', () => {
